@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   runtime,
   projects,
+  catalogs,
   projectFieldsToColumnOptions,
   type DocumentListItem,
   type ProjectResponse,
+  type CatalogResponse,
 } from "../api/client";
 import styles from "./DocumentList.module.css";
 
@@ -21,13 +23,33 @@ function getColumnLabelByKey(project: ProjectResponse | null): Record<string, st
   return Object.fromEntries(options.map((o) => [o.key, o.label]));
 }
 
-function getDocumentCellValue(d: DocumentListItem, key: string): string {
+/** Мапа value -> label для справочника (по value из items). */
+function catalogValueToLabel(catalog: CatalogResponse | undefined): Record<string, string> {
+  if (!catalog?.items?.length) return {};
+  return Object.fromEntries(catalog.items.map((i) => [i.value, i.label]));
+}
+
+function getDocumentCellValue(
+  d: DocumentListItem,
+  key: string,
+  project: ProjectResponse | null,
+  catalogsById: Record<string, CatalogResponse>
+): string {
   if (key === "document_number") return d.document_number != null ? String(d.document_number) : "";
   if (key === "id") return d.id || "";
   if (key === "process_name") return d.process_name || "Без названия";
   if (key === "status") return statusLabel[d.status] ?? d.status;
   const ctx = d.context ?? {};
   const val = ctx[key];
+  const field = project?.fields?.find((f) => f.key === key);
+  if (field?.catalog_id && (field.field_type === "select" || field.field_type === "multiselect")) {
+    const valueToLabel = catalogValueToLabel(catalogsById[field.catalog_id]);
+    if (field.field_type === "multiselect") {
+      const arr = Array.isArray(val) ? val : val != null ? [val] : [];
+      return arr.map((v) => valueToLabel[String(v)] ?? String(v)).join(", ");
+    }
+    return val != null ? (valueToLabel[String(val)] ?? String(val)) : "";
+  }
   return val != null ? String(val) : "";
 }
 
@@ -35,6 +57,7 @@ export function ProjectDocuments() {
   const { projectId } = useParams<{ projectId: string }>();
   const [project, setProject] = useState<ProjectResponse | null>(null);
   const [list, setList] = useState<DocumentListItem[]>([]);
+  const [catalogsById, setCatalogsById] = useState<Record<string, CatalogResponse>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +75,21 @@ export function ProjectDocuments() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [projectId]);
+
+  useEffect(() => {
+    if (!project?.fields?.length) return;
+    const catalogIds = [...new Set(project.fields.map((f) => f.catalog_id).filter(Boolean) as string[])];
+    if (catalogIds.length === 0) return;
+    Promise.all(catalogIds.map((id) => catalogs.get(id)))
+      .then((loaded) => {
+        const map: Record<string, CatalogResponse> = {};
+        loaded.forEach((c) => {
+          if (c?.id) map[c.id] = c;
+        });
+        setCatalogsById(map);
+      })
+      .catch(() => {});
+  }, [project?.id]);
 
   const columnLabelByKey = getColumnLabelByKey(project);
   const columns = project?.list_columns?.length
@@ -88,10 +126,10 @@ export function ProjectDocuments() {
                     <td key={key}>
                       {key === "document_number" || key === "id" || key === "process_name" ? (
                         <Link to={`/documents/${d.id}`} className={styles.docLink}>
-                          {getDocumentCellValue(d, key)}
+                          {getDocumentCellValue(d, key, project, catalogsById)}
                         </Link>
                       ) : (
-                        getDocumentCellValue(d, key)
+                        getDocumentCellValue(d, key, project, catalogsById)
                       )}
                     </td>
                   ))}
