@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from src.database import get_session
+from src.identity.domain import User
+from src.identity.infrastructure.deps import get_current_user_required
 from src.runtime.application.runtime_service import RuntimeService
 from src.rules.evaluator import evaluate_field_access
 from src.runtime.infrastructure.repository import ProcessInstanceRepository, FormSubmissionRepository
@@ -119,13 +121,17 @@ async def _form_to_dict(form, context: dict | None = None, catalog_repo: Catalog
 
 
 @router.get("/documents", response_model=list[DocumentListItem])
-async def list_documents(service: RuntimeService = Depends(get_runtime_service)):
+async def list_documents(
+    _user: User = Depends(get_current_user_required),
+    service: RuntimeService = Depends(get_runtime_service),
+):
     return await service.list_documents()
 
 
 @router.post("/processes/{process_definition_id}/start", response_model=StartProcessResponse)
 async def start_process(
     process_definition_id: UUID,
+    _user: User = Depends(get_current_user_required),
     service: RuntimeService = Depends(get_runtime_service),
 ):
     instance = await service.start_process(process_definition_id)
@@ -141,16 +147,17 @@ async def start_process(
 @router.get("/instances/{instance_id}/current-form", response_model=CurrentFormResponse)
 async def get_current_form(
     instance_id: UUID,
+    user: User = Depends(get_current_user_required),
     service: RuntimeService = Depends(get_runtime_service),
     catalog_repo: CatalogRepository = Depends(get_catalog_repo),
 ):
-    result = await service.get_current_form(instance_id)
+    role_ids = [str(r) for r in user.role_ids]
+    result = await service.get_current_form(instance_id, role_ids=role_ids)
     if not result:
         raise HTTPException(status_code=404, detail="No current form or process completed")
     form = result["form"]
     node_id = result["node_id"]
     instance = result["instance"]
-    role_ids = result.get("role_ids") or []
     context = {**instance.context, "role_ids": role_ids}
     submission_data = await service.get_submission_data(instance_id, node_id)
     form_def = await _form_to_dict(form, context, catalog_repo)
@@ -164,12 +171,14 @@ async def get_current_form(
 
 @router.post("/instances/{instance_id}/nodes/{node_id}/submit")
 async def submit_form(
-  instance_id: UUID,
-  node_id: str,
-  body: SubmitFormRequest,
-  service: RuntimeService = Depends(get_runtime_service),
+    instance_id: UUID,
+    node_id: str,
+    body: SubmitFormRequest,
+    user: User = Depends(get_current_user_required),
+    service: RuntimeService = Depends(get_runtime_service),
 ):
-    result = await service.get_current_form(instance_id)
+    role_ids = [str(r) for r in user.role_ids]
+    result = await service.get_current_form(instance_id, role_ids=role_ids)
     if not result or result["node_id"] != node_id:
         raise HTTPException(status_code=400, detail="Invalid step or process state")
     form = result["form"]
@@ -188,6 +197,7 @@ async def submit_form(
 @router.get("/instances/{instance_id}", response_model=InstanceResponse)
 async def get_instance(
     instance_id: UUID,
+    _user: User = Depends(get_current_user_required),
     service: RuntimeService = Depends(get_runtime_service),
 ):
     instance = await service.get_instance(instance_id)

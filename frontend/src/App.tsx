@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 import { Layout } from "./components/Layout";
 import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { Roles } from "./pages/Roles";
+import { Users } from "./pages/Users";
 import { FormList, FormConstructor } from "./form-constructor";
 import { CatalogList, CatalogEditor } from "./catalogs";
 import { ProcessEditor, ProcessList } from "./process-editor";
@@ -13,12 +15,14 @@ import "./App.css";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="login" element={<Login />} />
           <Route path="roles" element={<Roles />} />
+          <Route path="users" element={<Users />} />
           <Route path="catalogs" element={<CatalogList />} />
           <Route path="catalogs/:catalogId" element={<CatalogEditor />} />
           <Route path="forms" element={<FormList />} />
@@ -32,6 +36,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </AuthProvider>
   );
 }
 

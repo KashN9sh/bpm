@@ -5,6 +5,8 @@ from pydantic import BaseModel
 
 from src.database import get_session
 from src.catalogs.infrastructure.repository import CatalogRepository
+from src.identity.domain import User
+from src.identity.infrastructure.deps import require_admin
 
 router = APIRouter(prefix="/api/catalogs", tags=["catalogs"])
 
@@ -47,20 +49,31 @@ def _catalog_to_response(c) -> CatalogResponse:
 
 
 @router.post("", response_model=CatalogResponse)
-async def create_catalog(body: CatalogCreate, repo: CatalogRepository = Depends(get_catalog_repo)):
+async def create_catalog(
+    body: CatalogCreate,
+    _admin: User = Depends(require_admin),
+    repo: CatalogRepository = Depends(get_catalog_repo),
+):
     items = [x.model_dump() for x in (body.items or [])]
     catalog = await repo.create(name=body.name, description=body.description, items=items)
     return _catalog_to_response(catalog)
 
 
 @router.get("", response_model=list[CatalogResponse])
-async def list_catalogs(repo: CatalogRepository = Depends(get_catalog_repo)):
+async def list_catalogs(
+    _admin: User = Depends(require_admin),
+    repo: CatalogRepository = Depends(get_catalog_repo),
+):
     catalogs = await repo.list_all()
     return [_catalog_to_response(c) for c in catalogs]
 
 
 @router.get("/{catalog_id}", response_model=CatalogResponse)
-async def get_catalog(catalog_id: UUID, repo: CatalogRepository = Depends(get_catalog_repo)):
+async def get_catalog(
+    catalog_id: UUID,
+    _admin: User = Depends(require_admin),
+    repo: CatalogRepository = Depends(get_catalog_repo),
+):
     catalog = await repo.get_by_id(catalog_id)
     if not catalog:
         raise HTTPException(status_code=404, detail="Catalog not found")
@@ -71,6 +84,7 @@ async def get_catalog(catalog_id: UUID, repo: CatalogRepository = Depends(get_ca
 async def update_catalog(
     catalog_id: UUID,
     body: CatalogUpdate,
+    _admin: User = Depends(require_admin),
     repo: CatalogRepository = Depends(get_catalog_repo),
 ):
     items = [x.model_dump() for x in body.items] if body.items is not None else None
@@ -81,7 +95,11 @@ async def update_catalog(
 
 
 @router.delete("/{catalog_id}", status_code=204)
-async def delete_catalog(catalog_id: UUID, repo: CatalogRepository = Depends(get_catalog_repo)):
+async def delete_catalog(
+    catalog_id: UUID,
+    _admin: User = Depends(require_admin),
+    repo: CatalogRepository = Depends(get_catalog_repo),
+):
     ok = await repo.delete(catalog_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Catalog not found")

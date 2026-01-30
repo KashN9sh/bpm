@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.identity.domain import User, Role
 from src.identity.infrastructure.models import UserModel, RoleModel, user_roles
@@ -13,7 +14,7 @@ class IdentityRepository:
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
         result = await self._session.execute(
-            select(UserModel).where(UserModel.id == str(user_id))
+            select(UserModel).options(selectinload(UserModel.roles)).where(UserModel.id == str(user_id))
         )
         row = result.scalar_one_or_none()
         if not row:
@@ -28,7 +29,7 @@ class IdentityRepository:
 
     async def get_user_by_email(self, email: str) -> User | None:
         result = await self._session.execute(
-            select(UserModel).where(UserModel.email == email)
+            select(UserModel).options(selectinload(UserModel.roles)).where(UserModel.email == email)
         )
         row = result.scalar_one_or_none()
         if not row:
@@ -60,12 +61,11 @@ class IdentityRepository:
                     user_roles.insert().values(user_id=user.id, role_id=str(rid))
                 )
         await self._session.refresh(user)
-        role_ids_resolved = [UUID(r.id) for r in user.roles]
         return User(
             id=UUID(user.id),
             email=user.email,
             hashed_password=user.hashed_password,
-            role_ids=tuple(role_ids_resolved),
+            role_ids=tuple(role_ids) if role_ids else (),
         )
 
     async def create_role(self, name: str) -> Role:
@@ -79,3 +79,21 @@ class IdentityRepository:
         result = await self._session.execute(select(RoleModel))
         rows = result.scalars().all()
         return [Role(id=UUID(r.id), name=r.name) for r in rows]
+
+    async def list_users(self) -> list[User]:
+        result = await self._session.execute(
+            select(UserModel).options(selectinload(UserModel.roles)).order_by(UserModel.email)
+        )
+        rows = result.scalars().all()
+        out = []
+        for row in rows:
+            role_ids = [UUID(r.id) for r in row.roles]
+            out.append(
+                User(
+                    id=UUID(row.id),
+                    email=row.email,
+                    hashed_password=row.hashed_password,
+                    role_ids=tuple(role_ids),
+                )
+            )
+        return out

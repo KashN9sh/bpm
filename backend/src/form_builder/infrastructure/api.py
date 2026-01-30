@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from src.database import get_session
 from src.form_builder.application.form_service import FormService
 from src.form_builder.infrastructure.repository import FormDefinitionRepository
+from src.identity.domain import User
+from src.identity.infrastructure.deps import require_admin
 
 router = APIRouter(prefix="/api/forms", tags=["forms"])
 
@@ -79,20 +81,31 @@ def get_form_service(repo: FormDefinitionRepository = Depends(get_form_repo)) ->
 
 
 @router.post("", response_model=FormResponse)
-async def create_form(body: FormCreate, service: FormService = Depends(get_form_service)):
+async def create_form(
+    body: FormCreate,
+    _admin: User = Depends(require_admin),
+    service: FormService = Depends(get_form_service),
+):
     fields = [f.model_dump() for f in (body.fields or [])]
     form = await service.create_form(name=body.name, description=body.description, fields=fields)
     return _form_to_response(form)
 
 
 @router.get("", response_model=list[FormResponse])
-async def list_forms(service: FormService = Depends(get_form_service)):
+async def list_forms(
+    _admin: User = Depends(require_admin),
+    service: FormService = Depends(get_form_service),
+):
     forms = await service.list_forms()
     return [_form_to_response(f) for f in forms]
 
 
 @router.get("/{form_id}", response_model=FormResponse)
-async def get_form(form_id: UUID, service: FormService = Depends(get_form_service)):
+async def get_form(
+    form_id: UUID,
+    _admin: User = Depends(require_admin),
+    service: FormService = Depends(get_form_service),
+):
     form = await service.get_form(form_id)
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
@@ -103,6 +116,7 @@ async def get_form(form_id: UUID, service: FormService = Depends(get_form_servic
 async def update_form(
     form_id: UUID,
     body: FormUpdate,
+    _admin: User = Depends(require_admin),
     service: FormService = Depends(get_form_service),
 ):
     fields = [f.model_dump() for f in body.fields] if body.fields is not None else None
@@ -115,7 +129,11 @@ async def update_form(
 
 
 @router.delete("/{form_id}", status_code=204)
-async def delete_form(form_id: UUID, service: FormService = Depends(get_form_service)):
+async def delete_form(
+    form_id: UUID,
+    _admin: User = Depends(require_admin),
+    service: FormService = Depends(get_form_service),
+):
     ok = await service.delete_form(form_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Form not found")

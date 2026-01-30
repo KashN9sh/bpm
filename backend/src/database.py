@@ -38,3 +38,15 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+async def ensure_admin_role():
+    """Создаёт роль admin, если её ещё нет."""
+    from src.identity.infrastructure.repository import IdentityRepository
+
+    async with async_session_factory() as session:
+        repo = IdentityRepository(session)
+        roles = await repo.list_roles()
+        if not any(r.name == "admin" for r in roles):
+            await repo.create_role("admin")
+        await session.commit()

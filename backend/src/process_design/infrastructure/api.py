@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from src.database import get_session
+from src.identity.domain import User
+from src.identity.infrastructure.deps import get_current_user_required, require_admin
 from src.process_design.application.process_service import ProcessService
 from src.process_design.infrastructure.repository import ProcessDefinitionRepository
 
@@ -93,7 +95,11 @@ def get_process_service(repo: ProcessDefinitionRepository = Depends(get_process_
 
 
 @router.post("", response_model=ProcessResponse)
-async def create_process(body: ProcessCreate, service: ProcessService = Depends(get_process_service)):
+async def create_process(
+    body: ProcessCreate,
+    _admin: User = Depends(require_admin),
+    service: ProcessService = Depends(get_process_service),
+):
     nodes = [n.model_dump() for n in (body.nodes or [])]
     edges = [e.model_dump() for e in (body.edges or [])]
     process = await service.create_process(
@@ -103,13 +109,20 @@ async def create_process(body: ProcessCreate, service: ProcessService = Depends(
 
 
 @router.get("", response_model=list[ProcessResponse])
-async def list_processes(service: ProcessService = Depends(get_process_service)):
+async def list_processes(
+    _user: User = Depends(get_current_user_required),
+    service: ProcessService = Depends(get_process_service),
+):
     processes = await service.list_processes()
     return [_process_to_response(p) for p in processes]
 
 
 @router.get("/{process_id}", response_model=ProcessResponse)
-async def get_process(process_id: UUID, service: ProcessService = Depends(get_process_service)):
+async def get_process(
+    process_id: UUID,
+    _user: User = Depends(get_current_user_required),
+    service: ProcessService = Depends(get_process_service),
+):
     process = await service.get_process(process_id)
     if not process:
         raise HTTPException(status_code=404, detail="Process not found")
@@ -120,6 +133,7 @@ async def get_process(process_id: UUID, service: ProcessService = Depends(get_pr
 async def update_process(
     process_id: UUID,
     body: ProcessUpdate,
+    _admin: User = Depends(require_admin),
     service: ProcessService = Depends(get_process_service),
 ):
     nodes = [n.model_dump() for n in body.nodes] if body.nodes is not None else None
@@ -133,7 +147,11 @@ async def update_process(
 
 
 @router.delete("/{process_id}", status_code=204)
-async def delete_process(process_id: UUID, service: ProcessService = Depends(get_process_service)):
+async def delete_process(
+    process_id: UUID,
+    _admin: User = Depends(require_admin),
+    service: ProcessService = Depends(get_process_service),
+):
     ok = await service.delete_process(process_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Process not found")

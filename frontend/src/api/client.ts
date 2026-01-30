@@ -17,6 +17,10 @@ export async function api<T>(
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    localStorage.removeItem("token");
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
@@ -31,9 +35,10 @@ export const identity = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  me: () => api<{ id: string; email: string }>("/api/identity/users/me"),
+  me: () => api<{ id: string; email: string; roles: string[] }>("/api/identity/users/me"),
+  listUsers: () => api<{ id: string; email: string; roles?: string[] }[]>("/api/identity/users"),
   createUser: (email: string, password: string, role_ids?: string[]) =>
-    api<{ id: string; email: string }>("/api/identity/users", {
+    api<{ id: string; email: string; roles?: string[] }>("/api/identity/users", {
       method: "POST",
       body: JSON.stringify({ email, password, role_ids }),
     }),

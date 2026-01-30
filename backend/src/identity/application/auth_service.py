@@ -1,21 +1,27 @@
+import hashlib
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from src.config import settings
 from src.identity.domain import User, Role
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Предварительный SHA256 избегает лимита 72 байт у bcrypt и убирает зависимость от passlib
+def _password_digest(password: str) -> bytes:
+    return hashlib.sha256(password.encode("utf-8")).digest()
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    digest = _password_digest(plain_password)
+    stored = hashed_password.encode("utf-8") if isinstance(hashed_password, str) else hashed_password
+    return bcrypt.checkpw(digest, stored)
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    digest = _password_digest(password)
+    return bcrypt.hashpw(digest, bcrypt.gensalt()).decode("utf-8")
 
 
 def create_access_token(subject: str | UUID) -> str:

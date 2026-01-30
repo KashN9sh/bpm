@@ -2,11 +2,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr  # requires pydantic[email]
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_session
 from src.identity.application.auth_service import AuthService, hash_password, decode_access_token
 from src.identity.domain import User
+from src.identity.infrastructure.deps import get_identity_repo, get_current_user_required, require_admin
 from src.identity.infrastructure.repository import IdentityRepository
 
 router = APIRouter(prefix="/api/identity", tags=["identity"])
@@ -25,10 +24,11 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
+    roles: list[str] = []
 
     @classmethod
-    def from_user(cls, user: User) -> "UserResponse":
-        return cls(id=str(user.id), email=user.email)
+    def from_user(cls, user: User, role_names: list[str] | None = None) -> "UserResponse":
+        return cls(id=str(user.id), email=user.email, roles=role_names or [])
 
 
 class CreateUserRequest(BaseModel):
@@ -44,10 +44,6 @@ class CreateRoleRequest(BaseModel):
 class RoleResponse(BaseModel):
     id: str
     name: str
-
-
-def get_identity_repo(session: AsyncSession = Depends(get_session)) -> IdentityRepository:
-    return IdentityRepository(session)
 
 
 def get_auth_service(repo: IdentityRepository = Depends(get_identity_repo)) -> AuthService:
@@ -69,9 +65,19 @@ async def login(
     return TokenResponse(access_token=token)
 
 
+@router.get("/users", response_model=list[UserResponse])
+async def list_users(
+    _admin: User = Depends(require_admin),
+    repo: IdentityRepository = Depends(get_identity_repo),
+):
+    users = await repo.list_users()
+    return [UserResponse.from_user(u) for u in users]
+
+
 @router.post("/users", response_model=UserResponse)
 async def create_user(
     body: CreateUserRequest,
+    _admin: User = Depends(require_admin),
     repo: IdentityRepository = Depends(get_identity_repo),
 ):
     role_ids = [UUID(r) for r in (body.role_ids or [])]
@@ -85,24 +91,17 @@ async def create_user(
 
 @router.get("/users/me", response_model=UserResponse)
 async def get_current_user(
-    authorization: str | None = None,
+    user: User = Depends(get_current_user_required),
     repo: IdentityRepository = Depends(get_identity_repo),
 ):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token")
-    token = authorization.removeprefix("Bearer ").strip()
-    sub = decode_access_token(token)
-    if not sub:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    user = await repo.get_user_by_id(UUID(sub))
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    return UserResponse.from_user(user)
+    roles = await repo.get_roles_for_user(user.id)
+    return UserResponse.from_user(user, role_names=[r.name for r in roles])
 
 
 @router.post("/roles", response_model=RoleResponse)
 async def create_role(
     body: CreateRoleRequest,
+    _admin: User = Depends(require_admin),
     repo: IdentityRepository = Depends(get_identity_repo),
 ):
     role = await repo.create_role(name=body.name)
@@ -110,6 +109,9 @@ async def create_role(
 
 
 @router.get("/roles", response_model=list[RoleResponse])
-async def list_roles(repo: IdentityRepository = Depends(get_identity_repo)):
+async def list_roles(
+    _admin: User = Depends(require_admin),
+    repo: IdentityRepository = Depends(get_identity_repo),
+):
     roles = await repo.list_roles()
     return [RoleResponse(id=str(r.id), name=r.name) for r in roles]

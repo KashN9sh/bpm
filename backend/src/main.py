@@ -10,7 +10,10 @@ from src.catalogs.infrastructure.api import router as catalogs_router
 
 
 async def lifespan(app: FastAPI):
+    from src.database import ensure_admin_role
+
     await init_db()
+    await ensure_admin_role()
     yield
     # shutdown if needed
 

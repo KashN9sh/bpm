@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { identity } from "../api/client";
+import { useAuth } from "../contexts/AuthContext";
 import styles from "./Login.module.css";
 
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setUser } = useAuth();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
 
   const [email, setEmail] = useState("");
@@ -20,6 +22,8 @@ export function Login() {
     try {
       const { access_token } = await identity.login(email, password);
       localStorage.setItem("token", access_token);
+      const me = await identity.me();
+      setUser({ id: me.id, email: me.email, roles: me.roles ?? [] });
       navigate(from, { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка входа");
