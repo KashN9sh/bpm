@@ -28,6 +28,8 @@ export function ProjectEditor() {
   const [fields, setFields] = useState<ProjectFieldSchema[]>([]);
   const [selectedFieldIndex, setSelectedFieldIndex] = useState<number | null>(null);
   const [catalogList, setCatalogList] = useState<CatalogResponse[]>([]);
+  const [draggedColumnIndex, setDraggedColumnIndex] = useState<number | null>(null);
+  const [dragOverColumnIndex, setDragOverColumnIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,10 +59,29 @@ export function ProjectEditor() {
     fields,
   } as ProjectResponse);
 
-  const toggleListColumn = (key: string) => {
-    setListColumns((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+  const columnLabelByKey: Record<string, string> = Object.fromEntries(
+    listColumnOptions.map((o) => [o.key, o.label])
+  );
+
+  const addListColumn = (key: string) => {
+    if (listColumns.includes(key)) return;
+    setListColumns((prev) => [...prev, key]);
+  };
+
+  const removeListColumn = (key: string) => {
+    setListColumns((prev) => prev.filter((k) => k !== key));
+  };
+
+  const moveListColumn = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setListColumns((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, removed);
+      return next;
+    });
+    setDraggedColumnIndex(null);
+    setDragOverColumnIndex(null);
   };
 
   const updateProjectField = (index: number, patch: Partial<ProjectFieldSchema>) => {
@@ -246,20 +267,63 @@ export function ProjectEditor() {
         <fieldset className={styles.fieldset}>
           <legend>Поля в списке документов</legend>
           <p className={styles.fieldsetHint}>
-            Выберите колонки, которые будут отображаться в списке документов проекта.
+            Порядок колонок можно менять перетаскиванием. Добавьте колонки из списка ниже.
           </p>
-          <div className={styles.checkboxGroup}>
-            {listColumnOptions.map((opt) => (
-              <label key={opt.key} className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={listColumns.includes(opt.key)}
-                  onChange={() => toggleListColumn(opt.key)}
-                />
-                {opt.label}
-              </label>
+          <ul className={styles.columnOrderList} aria-label="Порядок колонок">
+            {listColumns.map((key, i) => (
+              <li
+                key={key}
+                className={`${styles.columnOrderItem} ${draggedColumnIndex === i ? styles.dragging : ""} ${dragOverColumnIndex === i ? styles.dragOver : ""}`}
+                draggable
+                onDragStart={() => setDraggedColumnIndex(i)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverColumnIndex(i);
+                }}
+                onDragLeave={() => setDragOverColumnIndex(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (draggedColumnIndex != null) moveListColumn(draggedColumnIndex, i);
+                }}
+                onDragEnd={() => {
+                  setDraggedColumnIndex(null);
+                  setDragOverColumnIndex(null);
+                }}
+              >
+                <span className={styles.dragHandle} aria-hidden>⋮⋮</span>
+                <span className={styles.columnOrderLabel}>{columnLabelByKey[key] ?? key}</span>
+                <button
+                  type="button"
+                  className={styles.removeBtn}
+                  onClick={() => removeListColumn(key)}
+                  aria-label={`Удалить колонку ${columnLabelByKey[key] ?? key}`}
+                >
+                  ×
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
+          <label className={styles.addColumnLabel}>
+            Добавить колонку
+            <select
+              value=""
+              onChange={(e) => {
+                const key = e.target.value;
+                if (key) addListColumn(key);
+                e.target.value = "";
+              }}
+              className={styles.addColumnSelect}
+            >
+              <option value="">— Выберите —</option>
+              {listColumnOptions
+                .filter((opt) => !listColumns.includes(opt.key))
+                .map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    {opt.label}
+                  </option>
+                ))}
+            </select>
+          </label>
         </fieldset>
         <div className={styles.actions}>
           <button type="submit" disabled={saving}>

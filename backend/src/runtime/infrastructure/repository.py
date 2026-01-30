@@ -85,7 +85,7 @@ class ProcessInstanceRepository:
 
     async def list_all(self):
         result = await self._session.execute(
-            select(ProcessInstanceModel).order_by(ProcessInstanceModel.id.desc())
+            select(ProcessInstanceModel).order_by(ProcessInstanceModel.document_number.desc())
         )
         rows = result.scalars().all()
         return [_deserialize_instance(r) for r in rows]
