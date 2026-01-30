@@ -80,6 +80,23 @@ python -m src.cli role create manager
 
 Через entry point (после `pip install -e .`): `bpm db-init`, `bpm user create -e admin@test.local -a`, `bpm user list`, `bpm role list`, `bpm role create manager`.
 
+**Миграции (Alembic)** — схема БД ведётся через миграции. При старте контейнера backend автоматически выполняется `alembic upgrade head`. Модели SQLAlchemy уже подключены к Alembic (`target_metadata = Base.metadata` в `alembic/env.py`), поэтому новые миграции можно генерировать по изменениям моделей:
+
+```bash
+# Из каталога backend, с настроенным DATABASE_URL (или из Docker):
+# Локально:
+cd backend && PYTHONPATH=. DATABASE_URL="postgresql+asyncpg://bpm:bpm@localhost:5432/bpm" alembic revision --autogenerate -m "описание изменений"
+
+# В Docker (контейнеры запущены):
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec backend sh -c 'PYTHONPATH=/app alembic revision --autogenerate -m "описание"'
+
+# Через CLI (из каталога backend, DATABASE_URL в окружении):
+bpm migration "описание изменений"
+# или: python -m src.cli migration "описание"
+```
+
+Сгенерированный файл в `alembic/versions/` нужно проверить и при необходимости поправить, затем закоммитить. При следующем деплое/старте контейнера миграция применится автоматически.
+
 **Frontend**
 
 ```bash

@@ -11,5 +11,6 @@ class ProcessDefinitionModel(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     version: Mapped[int] = mapped_column(Integer, default=1)
+    project_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     nodes_schema: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     edges_schema: Mapped[str] = mapped_column(Text, nullable=False, default="[]")

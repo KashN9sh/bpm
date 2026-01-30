@@ -33,6 +33,7 @@ class EdgeSchema(BaseModel):
 class ProcessCreate(BaseModel):
     name: str
     description: str = ""
+    project_id: str | None = None
     nodes: list[NodeSchema] | None = None
     edges: list[EdgeSchema] | None = None
 
@@ -40,6 +41,7 @@ class ProcessCreate(BaseModel):
 class ProcessUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    project_id: str | None = None
     nodes: list[NodeSchema] | None = None
     edges: list[EdgeSchema] | None = None
 
@@ -49,6 +51,7 @@ class ProcessResponse(BaseModel):
     name: str
     description: str
     version: int
+    project_id: str | None = None
     nodes: list[dict]
     edges: list[dict]
 
@@ -81,6 +84,7 @@ def _process_to_response(p) -> ProcessResponse:
         name=p.name,
         description=p.description,
         version=p.version,
+        project_id=str(p.project_id) if p.project_id else None,
         nodes=nodes,
         edges=edges,
     )
@@ -102,8 +106,13 @@ async def create_process(
 ):
     nodes = [n.model_dump() for n in (body.nodes or [])]
     edges = [e.model_dump() for e in (body.edges or [])]
+    project_id = UUID(body.project_id) if body.project_id else None
     process = await service.create_process(
-        name=body.name, description=body.description, nodes=nodes, edges=edges
+        name=body.name,
+        description=body.description,
+        project_id=project_id,
+        nodes=nodes,
+        edges=edges,
     )
     return _process_to_response(process)
 
@@ -112,8 +121,9 @@ async def create_process(
 async def list_processes(
     _user: User = Depends(get_current_user_required),
     service: ProcessService = Depends(get_process_service),
+    project_id: UUID | None = None,
 ):
-    processes = await service.list_processes()
+    processes = await service.list_processes(project_id=project_id)
     return [_process_to_response(p) for p in processes]
 
 
@@ -138,8 +148,14 @@ async def update_process(
 ):
     nodes = [n.model_dump() for n in body.nodes] if body.nodes is not None else None
     edges = [e.model_dump() for e in body.edges] if body.edges is not None else None
+    project_id = UUID(body.project_id) if body.project_id else None
     process = await service.update_process(
-        process_id, name=body.name, description=body.description, nodes=nodes, edges=edges
+        process_id,
+        name=body.name,
+        description=body.description,
+        project_id=project_id,
+        nodes=nodes,
+        edges=edges,
     )
     if not process:
         raise HTTPException(status_code=404, detail="Process not found")

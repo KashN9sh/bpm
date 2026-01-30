@@ -37,6 +37,7 @@ class ProcessDefinition:
     name: str
     description: str
     version: int
+    project_id: UUID | None = None
     nodes: list[Node] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
 

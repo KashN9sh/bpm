@@ -29,9 +29,13 @@ class RuntimeService:
     async def get_instance(self, instance_id: UUID) -> ProcessInstance | None:
         return await self._instance_repo.get_by_id(instance_id)
 
-    async def list_documents(self) -> list[dict]:
-        """Список документов (экземпляров процессов) с названием процесса."""
+    async def list_documents(self, project_id: UUID | None = None) -> list[dict]:
+        """Список документов (экземпляров процессов). Если задан project_id — только из этого подпроекта."""
         instances = await self._instance_repo.list_all()
+        if project_id is not None:
+            processes_in_project = await self._process_repo.list_all(project_id=project_id)
+            pid_set = {p.id for p in processes_in_project}
+            instances = [i for i in instances if i.process_definition_id in pid_set]
         out = []
         for inst in instances:
             process = await self._process_repo.get_by_id(inst.process_definition_id)
@@ -39,6 +43,7 @@ class RuntimeService:
                 "id": str(inst.id),
                 "process_definition_id": str(inst.process_definition_id),
                 "process_name": process.name if process else "",
+                "process_project_id": str(process.project_id) if process and process.project_id else None,
                 "status": inst.status.value,
                 "current_node_id": inst.current_node_id,
             })

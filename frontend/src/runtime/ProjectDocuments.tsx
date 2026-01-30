@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { runtime, projects, type DocumentListItem, type ProjectResponse } from "../api/client";
+import { Link, useParams } from "react-router-dom";
+import { runtime, projects, type DocumentListItem } from "../api/client";
 import styles from "./DocumentList.module.css";
 
 const statusLabel: Record<string, string> = {
@@ -10,52 +10,39 @@ const statusLabel: Record<string, string> = {
   cancelled: "Отменён",
 };
 
-export function DocumentList() {
+export function ProjectDocuments() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const [projectName, setProjectName] = useState<string>("");
   const [list, setList] = useState<DocumentListItem[]>([]);
-  const [projectList, setProjectList] = useState<ProjectResponse[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    projects.list().then(setProjectList).catch(() => setProjectList([]));
-  }, []);
+    if (!projectId) return;
+    projects.get(projectId).then((p) => setProjectName(p.name)).catch(() => setProjectName(""));
+  }, [projectId]);
 
   useEffect(() => {
+    if (!projectId) return;
     setLoading(true);
     runtime
-      .listDocuments(selectedProjectId ?? undefined)
+      .listDocuments(projectId)
       .then(setList)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [selectedProjectId]);
+  }, [projectId]);
 
+  if (!projectId) return <div className={styles.wrap}>Не указан проект.</div>;
   if (loading) return <div className={styles.wrap}>Загрузка…</div>;
   if (error) return <div className={styles.wrap}>Ошибка: {error}</div>;
 
   return (
     <div className={styles.wrap}>
-      <h1>Документы</h1>
+      <h1>{projectName || "Документы проекта"}</h1>
       <p className={styles.intro}>
-        Документ — это экземпляр процесса: форма (документ) движется по шагам процесса.
+        Документ — экземпляр процесса: форма движется по шагам процесса.
       </p>
-      {projectList.length > 0 && (
-        <label className={styles.projectFilter}>
-          Проект
-          <select
-            value={selectedProjectId ?? ""}
-            onChange={(e) => setSelectedProjectId(e.target.value || null)}
-          >
-            <option value="">Все проекты</option>
-            {projectList.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <Link to="/documents/new" className={styles.createLink}>
+      <Link to={`/projects/${projectId}/documents/new`} className={styles.createLink}>
         Создать документ
       </Link>
       <ul className={styles.list}>

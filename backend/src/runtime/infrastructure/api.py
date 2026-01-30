@@ -124,8 +124,9 @@ async def _form_to_dict(form, context: dict | None = None, catalog_repo: Catalog
 async def list_documents(
     _user: User = Depends(get_current_user_required),
     service: RuntimeService = Depends(get_runtime_service),
+    project_id: UUID | None = None,
 ):
-    return await service.list_documents()
+    return await service.list_documents(project_id=project_id)
 
 
 @router.post("/processes/{process_definition_id}/start", response_model=StartProcessResponse)

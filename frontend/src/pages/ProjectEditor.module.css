@@ -1,0 +1,54 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 640px;
+}
+
+.error {
+  background-color: #fef2f2;
+  color: var(--color-error);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.form label {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.form input {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.actions button {
+  background-color: var(--color-accent);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.actions button:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.actions button[type="button"] {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.actions button[type="button"]:hover {
+  background-color: var(--color-border);
+}

@@ -57,11 +57,13 @@ def _deserialize_process(row: ProcessDefinitionModel) -> ProcessDefinition:
     edges_data = json.loads(row.edges_schema) if row.edges_schema else []
     nodes = [_deserialize_node(n) for n in nodes_data]
     edges = [_deserialize_edge(e) for e in edges_data]
+    project_id = UUID(row.project_id) if getattr(row, "project_id", None) else None
     return ProcessDefinition(
         id=UUID(row.id),
         name=row.name,
         description=row.description or "",
         version=row.version or 1,
+        project_id=project_id,
         nodes=nodes,
         edges=edges,
     )
@@ -75,6 +77,7 @@ class ProcessDefinitionRepository:
         self,
         name: str,
         description: str = "",
+        project_id: UUID | None = None,
         nodes: list[dict] | None = None,
         edges: list[dict] | None = None,
     ) -> ProcessDefinition:
@@ -83,6 +86,7 @@ class ProcessDefinitionRepository:
         model = ProcessDefinitionModel(
             name=name,
             description=description,
+            project_id=str(project_id) if project_id else None,
             nodes_schema=nodes_json,
             edges_schema=edges_json,
         )
@@ -100,10 +104,11 @@ class ProcessDefinitionRepository:
             return None
         return _deserialize_process(row)
 
-    async def list_all(self) -> list[ProcessDefinition]:
-        result = await self._session.execute(
-            select(ProcessDefinitionModel).order_by(ProcessDefinitionModel.name)
-        )
+    async def list_all(self, project_id: UUID | None = None) -> list[ProcessDefinition]:
+        q = select(ProcessDefinitionModel).order_by(ProcessDefinitionModel.name)
+        if project_id is not None:
+            q = q.where(ProcessDefinitionModel.project_id == str(project_id))
+        result = await self._session.execute(q)
         rows = result.scalars().all()
         return [_deserialize_process(r) for r in rows]
 
@@ -112,6 +117,7 @@ class ProcessDefinitionRepository:
         process_id: UUID,
         name: str | None = None,
         description: str | None = None,
+        project_id: UUID | None = None,
         nodes: list[dict] | None = None,
         edges: list[dict] | None = None,
     ) -> ProcessDefinition | None:
@@ -125,6 +131,8 @@ class ProcessDefinitionRepository:
             row.name = name
         if description is not None:
             row.description = description
+        if project_id is not None:
+            row.project_id = str(project_id) if project_id else None
         if nodes is not None:
             row.nodes_schema = json.dumps(nodes)
         if edges is not None:

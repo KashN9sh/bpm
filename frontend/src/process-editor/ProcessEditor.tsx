@@ -18,9 +18,11 @@ import "@xyflow/react/dist/style.css";
 import {
   processes,
   forms,
+  projects,
   type ProcessNodeSchema,
   type ProcessEdgeSchema,
   type FormResponse,
+  type ProjectResponse,
 } from "../api/client";
 import { ProcessNode } from "./ProcessNode";
 import styles from "./ProcessEditor.module.css";
@@ -86,9 +88,11 @@ export function ProcessEditor() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [formList, setFormList] = useState<FormResponse[]>([]);
+  const [projectList, setProjectList] = useState<ProjectResponse[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,12 +100,14 @@ export function ProcessEditor() {
 
   useEffect(() => {
     forms.list().then(setFormList).catch(() => setFormList([]));
+    projects.list().then(setProjectList).catch(() => setProjectList([]));
   }, []);
 
   useEffect(() => {
     if (isNew) {
       setName("");
       setDescription("");
+      setProjectId(null);
       setNodes([
         {
           id: "start-1",
@@ -120,6 +126,7 @@ export function ProcessEditor() {
       .then((p) => {
         setName(p.name);
         setDescription(p.description);
+        setProjectId(p.project_id ?? null);
         setNodes(toFlowNodes(p.nodes));
         setEdges(toFlowEdges(p.edges));
       })
@@ -148,6 +155,7 @@ export function ProcessEditor() {
     const payload = {
       name: name.trim() || "Процесс",
       description: description.trim(),
+      project_id: projectId ?? undefined,
       nodes: fromFlowNodes(nodes),
       edges: fromFlowEdges(edges),
     };
@@ -200,6 +208,23 @@ export function ProcessEditor() {
             placeholder="Описание"
             className={styles.descInput}
           />
+          {projectList.length > 0 && (
+            <label className={styles.projectLabel}>
+              Проект
+              <select
+                value={projectId ?? ""}
+                onChange={(e) => setProjectId(e.target.value || null)}
+                className={styles.projectSelect}
+              >
+                <option value="">— Не выбран —</option>
+                {projectList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         <div className={styles.actions}>
           <button type="button" onClick={save} disabled={saving}>

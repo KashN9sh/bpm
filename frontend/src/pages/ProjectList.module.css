@@ -8,18 +8,6 @@
   font-size: 0.9375rem;
 }
 
-.projectFilter {
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.projectFilter select {
-  margin-left: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
-
 .createLink {
   display: inline-block;
   margin-bottom: 1rem;
@@ -59,13 +47,24 @@
   border-bottom: none;
 }
 
-.docLink {
+.link {
   color: var(--color-accent);
   font-weight: 500;
 }
 
-.docLink:hover {
+.link:hover {
   text-decoration: underline;
+}
+
+.desc {
+  color: var(--color-text-muted);
+  flex: 1;
+  font-size: 0.875rem;
+}
+
+.sortOrder {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
 }
 
 .empty {

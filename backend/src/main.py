@@ -5,6 +5,7 @@ from src.database import init_db
 from src.identity.infrastructure.api import router as identity_router
 from src.form_builder.infrastructure.api import router as forms_router
 from src.process_design.infrastructure.api import router as processes_router
+from src.projects.infrastructure.api import router as projects_router
 from src.runtime.infrastructure.api import router as runtime_router
 from src.catalogs.infrastructure.api import router as catalogs_router
 
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(identity_router)
 app.include_router(forms_router)
 app.include_router(processes_router)
+app.include_router(projects_router)
 app.include_router(runtime_router)
 app.include_router(catalogs_router)
 

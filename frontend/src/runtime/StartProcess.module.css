@@ -8,6 +8,18 @@
   font-size: 0.9375rem;
 }
 
+.projectFilter {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.projectFilter select {
+  margin-left: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
 .list {
   list-style: none;
   padding: 0;

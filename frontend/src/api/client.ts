@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_TIMEOUT_MS = 15000;
 
 function getToken(): string | null {
   return localStorage.getItem("token");
@@ -16,14 +17,34 @@ export async function api<T>(
   if (token) {
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+    signal: options.signal ?? controller.signal,
+  });
+  clearTimeout(timeoutId);
   if (res.status === 401) {
     localStorage.removeItem("token");
     window.dispatchEvent(new CustomEvent("auth:unauthorized"));
   }
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    let message = text || `HTTP ${res.status}`;
+    try {
+      const json = JSON.parse(text) as { detail?: string | unknown[] };
+      if (json.detail !== undefined) {
+        message = Array.isArray(json.detail)
+          ? (json.detail[0] as { msg?: string })?.msg ?? String(json.detail[0])
+          : String(json.detail);
+      }
+    } catch {
+      // оставляем message как text
+    }
+    if (res.status === 403) message = "Нет прав (требуется роль администратора).";
+    if (res.status === 401) message = "Требуется вход в систему.";
+    throw new Error(message);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
@@ -146,6 +167,31 @@ export const catalogs = {
     api<void>(`/api/catalogs/${id}`, { method: "DELETE" }),
 };
 
+// Projects API (подпроекты документов)
+export interface ProjectResponse {
+  id: string;
+  name: string;
+  description: string;
+  sort_order: number;
+}
+
+export const projects = {
+  list: () => api<ProjectResponse[]>("/api/projects"),
+  get: (id: string) => api<ProjectResponse>(`/api/projects/${id}`),
+  create: (body: { name: string; description?: string; sort_order?: number }) =>
+    api<ProjectResponse>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: { name?: string; description?: string; sort_order?: number }) =>
+    api<ProjectResponse>(`/api/projects/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) =>
+    api<void>(`/api/projects/${id}`, { method: "DELETE" }),
+};
+
 // Process Design API
 export interface ProcessNodeSchema {
   id: string;
@@ -170,6 +216,7 @@ export interface ProcessResponse {
   name: string;
   description: string;
   version: number;
+  project_id: string | null;
   nodes: ProcessNodeSchema[];
   edges: ProcessEdgeSchema[];
 }
@@ -177,6 +224,7 @@ export interface ProcessResponse {
 export interface ProcessCreate {
   name: string;
   description?: string;
+  project_id?: string | null;
   nodes?: ProcessNodeSchema[];
   edges?: ProcessEdgeSchema[];
 }
@@ -184,12 +232,16 @@ export interface ProcessCreate {
 export interface ProcessUpdate {
   name?: string;
   description?: string;
+  project_id?: string | null;
   nodes?: ProcessNodeSchema[];
   edges?: ProcessEdgeSchema[];
 }
 
 export const processes = {
-  list: () => api<ProcessResponse[]>("/api/processes"),
+  list: (projectId?: string | null) =>
+    api<ProcessResponse[]>(
+      projectId ? `/api/processes?project_id=${encodeURIComponent(projectId)}` : "/api/processes"
+    ),
   get: (id: string) => api<ProcessResponse>(`/api/processes/${id}`),
   create: (body: ProcessCreate) =>
     api<ProcessResponse>("/api/processes", {
@@ -234,8 +286,10 @@ export interface DocumentListItem {
 }
 
 export const runtime = {
-  listDocuments: () =>
-    api<DocumentListItem[]>("/api/runtime/documents"),
+  listDocuments: (projectId?: string | null) =>
+    api<DocumentListItem[]>(
+      projectId ? `/api/runtime/documents?project_id=${encodeURIComponent(projectId)}` : "/api/runtime/documents"
+    ),
   startProcess: (processDefinitionId: string) =>
     api<{ instance_id: string; current_node_id: string; status: string }>(
       `/api/runtime/processes/${processDefinitionId}/start`,

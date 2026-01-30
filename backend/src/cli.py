@@ -1,9 +1,12 @@
 """
-CLI для BPM: инициализация БД, пользователи и роли.
+CLI для BPM: инициализация БД, пользователи, роли, миграции Alembic.
 Запуск: bpm <команда> или python -m src.cli <команда>
 """
 import asyncio
 import getpass
+import os
+import subprocess
+import sys
 
 import typer
 
@@ -125,6 +128,24 @@ def role_list():
                 typer.echo(f"  {r.name}  id={r.id}")
 
     _run(_list())
+
+
+@app.command()
+def migration(
+    message: str = typer.Argument(..., help="Описание изменений (для имени миграции)"),
+):
+    """Сгенерировать миграцию Alembic по текущим моделям (autogenerate). Требует DATABASE_URL."""
+    # Каталог backend (содержит src/ и alembic/)
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env = os.environ.copy()
+    env["PYTHONPATH"] = backend_dir
+    code = subprocess.run(
+        [sys.executable, "-m", "alembic", "revision", "--autogenerate", "-m", message],
+        cwd=backend_dir,
+        env=env,
+    ).returncode
+    if code != 0:
+        raise typer.Exit(code)
 
 
 if __name__ == "__main__":
