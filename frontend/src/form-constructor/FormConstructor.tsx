@@ -3,9 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   forms,
   identity,
+  catalogs,
   type FieldSchema,
   type FieldAccessRuleSchema,
 } from "../api/client";
+import type { CatalogResponse } from "../api/client";
 import { AccessConstructor } from "../access-constructor/AccessConstructor";
 import styles from "./FormConstructor.module.css";
 
@@ -39,6 +41,7 @@ export function FormConstructor() {
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState<FieldSchema[]>([]);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+  const [catalogList, setCatalogList] = useState<CatalogResponse[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,7 @@ export function FormConstructor() {
 
   useEffect(() => {
     identity.listRoles().then(setRoles).catch(() => setRoles([]));
+    catalogs.list().then(setCatalogList).catch(() => setCatalogList([]));
   }, []);
 
   useEffect(() => {
@@ -214,6 +218,27 @@ export function FormConstructor() {
                 ))}
               </select>
             </label>
+            {(selectedField.field_type === "select" || selectedField.field_type === "multiselect") && (
+              <label>
+                Справочник (варианты выбора)
+                <select
+                  value={selectedField.catalog_id ?? ""}
+                  onChange={(e) =>
+                    updateField(selectedFieldIndex!, {
+                      catalog_id: e.target.value || undefined,
+                      options: e.target.value ? undefined : selectedField.options,
+                    })
+                  }
+                >
+                  <option value="">— Вручную (options в форме) —</option>
+                  {catalogList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className={styles.checkLabel}>
               <input
                 type="checkbox"

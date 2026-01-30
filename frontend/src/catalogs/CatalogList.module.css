@@ -1,0 +1,52 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 640px;
+}
+
+.intro {
+  color: #555;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.createLink {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--link, #0a7ea4);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.list a {
+  color: var(--link, #0a7ea4);
+  text-decoration: none;
+}
+
+.desc {
+  color: #666;
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.count {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.empty {
+  color: #666;
+  margin-top: 1rem;
+}

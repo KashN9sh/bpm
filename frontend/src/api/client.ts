@@ -87,6 +87,7 @@ export interface FieldSchema {
   field_type: string;
   required: boolean;
   options?: { value: string; label: string }[] | null;
+  catalog_id?: string | null;
   validations?: Record<string, unknown> | null;
   access_rules?: FieldAccessRuleSchema[] | null;
 }
@@ -109,6 +110,36 @@ export interface FormUpdate {
   description?: string;
   fields?: FieldSchema[];
 }
+
+// Catalogs (справочники) API
+export interface CatalogItemSchema {
+  value: string;
+  label: string;
+}
+
+export interface CatalogResponse {
+  id: string;
+  name: string;
+  description: string;
+  items: CatalogItemSchema[];
+}
+
+export const catalogs = {
+  list: () => api<CatalogResponse[]>("/api/catalogs"),
+  get: (id: string) => api<CatalogResponse>(`/api/catalogs/${id}`),
+  create: (body: { name: string; description?: string; items?: CatalogItemSchema[] }) =>
+    api<CatalogResponse>("/api/catalogs", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: { name?: string; description?: string; items?: CatalogItemSchema[] }) =>
+    api<CatalogResponse>(`/api/catalogs/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) =>
+    api<void>(`/api/catalogs/${id}`, { method: "DELETE" }),
+};
 
 // Process Design API
 export interface ProcessNodeSchema {

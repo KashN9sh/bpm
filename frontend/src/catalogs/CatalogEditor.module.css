@@ -1,0 +1,77 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 640px;
+}
+
+.error {
+  color: #c00;
+  margin-bottom: 1rem;
+}
+
+.wrap label {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.wrap input[type="text"],
+.wrap textarea {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.section {
+  margin: 1.5rem 0;
+}
+
+.section h2 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.addBtn {
+  margin-bottom: 0.75rem;
+}
+
+.itemsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.itemsList li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.valueInput {
+  width: 120px;
+  padding: 0.4rem;
+}
+
+.labelInput {
+  flex: 1;
+  padding: 0.4rem;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0 0.25rem;
+}
+
+.removeBtn:hover {
+  color: #c00;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
