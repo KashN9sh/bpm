@@ -6,7 +6,9 @@ import { Login } from "./pages/Login";
 import { Roles } from "./pages/Roles";
 import { Users } from "./pages/Users";
 import { ProjectList } from "./pages/ProjectList";
+import { ProjectPage } from "./pages/ProjectPage";
 import { ProjectEditor } from "./pages/ProjectEditor";
+import { ProjectForms } from "./pages/ProjectForms";
 import { FormList, FormConstructor } from "./form-constructor";
 import { CatalogList, CatalogEditor } from "./catalogs";
 import { ProcessEditor, ProcessList } from "./process-editor";
@@ -32,9 +34,13 @@ function App() {
           <Route path="forms/:formId" element={<FormConstructor />} />
           <Route path="projects" element={<ProjectList />} />
           <Route path="projects/new" element={<ProjectEditor />} />
+          <Route path="projects/:projectId" element={<ProjectPage />}>
+            <Route index element={<ProjectEditor />} />
+            <Route path="settings" element={<ProjectEditor />} />
+            <Route path="forms" element={<ProjectForms />} />
+          </Route>
           <Route path="projects/:projectId/documents" element={<ProjectDocuments />} />
           <Route path="projects/:projectId/documents/new" element={<StartProcess />} />
-          <Route path="projects/:projectId" element={<ProjectEditor />} />
           <Route path="processes" element={<ProcessList />} />
           <Route path="processes/new" element={<ProcessEditor />} />
           <Route path="processes/:processId" element={<ProcessEditor />} />

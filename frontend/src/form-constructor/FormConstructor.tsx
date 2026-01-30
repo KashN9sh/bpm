@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   forms,
   identity,
@@ -7,25 +7,28 @@ import {
   projects,
   type FieldSchema,
   type FieldAccessRuleSchema,
-  type ProjectResponse,
   type ProjectFieldSchema,
 } from "../api/client";
-import type { CatalogResponse } from "../api/client";
+import type { CatalogResponse, ProjectResponse } from "../api/client";
 import { AccessConstructor } from "../access-constructor/AccessConstructor";
 import styles from "./FormConstructor.module.css";
 
 export function FormConstructor() {
   const { formId } = useParams<{ formId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isNew = formId === "new";
+  const projectIdFromState = (location.state as { projectId?: string } | null)?.projectId;
+  const projectIdFromUrl = searchParams.get("projectId");
+  const projectId = projectIdFromUrl || projectIdFromState;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState<FieldSchema[]>([]);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
   const [catalogList, setCatalogList] = useState<CatalogResponse[]>([]);
-  const [projectList, setProjectList] = useState<ProjectResponse[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [project, setProject] = useState<ProjectResponse | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +37,12 @@ export function FormConstructor() {
   useEffect(() => {
     identity.listRoles().then(setRoles).catch(() => setRoles([]));
     catalogs.list().then(setCatalogList).catch(() => setCatalogList([]));
-    projects.list().then(setProjectList).catch(() => setProjectList([]));
   }, []);
+
+  useEffect(() => {
+    if (!projectId) return;
+    projects.get(projectId).then(setProject).catch(() => setProject(null));
+  }, [projectId]);
 
   useEffect(() => {
     if (isNew || !formId || formId === "undefined") {
@@ -79,13 +86,14 @@ export function FormConstructor() {
     setSelectedFieldIndex(fields.length);
   };
 
-  const selectedProject = projectList.find((p) => p.id === selectedProjectId);
-  const projectFields = selectedProject?.fields ?? [];
-
   const removeField = (index: number) => {
     setFields((prev) => prev.filter((_, i) => i !== index));
     setSelectedFieldIndex(null);
   };
+
+  const projectFields = project?.fields ?? [];
+  const addedFieldKeys = new Set(fields.map((f) => f.name));
+  const projectFieldsAvailable = projectFields.filter((pf) => !addedFieldKeys.has(pf.key));
 
   const updateAccessRules = (index: number, rules: FieldAccessRuleSchema[]) => {
     updateField(index, { access_rules: rules });
@@ -103,7 +111,10 @@ export function FormConstructor() {
       if (isNew) {
         const created = await forms.create(payload);
         if (created?.id) {
-          navigate(`/forms/${created.id}`, { replace: true });
+          navigate(`/forms/${created.id}${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`, {
+            replace: true,
+            state: projectId ? { projectId } : undefined,
+          });
         }
       } else if (formId && formId !== "undefined") {
         await forms.update(formId, payload);
@@ -144,44 +155,50 @@ export function FormConstructor() {
         </label>
       </div>
 
-      <div className={styles.section}>
-        <h2>Поля из проекта</h2>
+      {!projectId && (
         <p className={styles.hint}>
-          Форма использует только поля проекта. Выберите проект и добавьте нужные поля в форму (ключ совпадёт со списком документов).
+          Откройте форму из раздела «Проекты» → проект → вкладка «Формы», чтобы добавлять поля из проекта.
         </p>
-        <select
-          value={selectedProjectId}
-          onChange={(e) => setSelectedProjectId(e.target.value)}
-          className={styles.select}
-        >
-          <option value="">— Не выбран —</option>
-          {projectList.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        {projectFields.length > 0 && (
-          <ul className={styles.projectFieldList}>
-            {projectFields.map((pf, i) => (
-              <li key={pf.key || i}>
-                <span>{pf.label || pf.key} ({pf.field_type})</span>
-                <button
-                  type="button"
-                  className={styles.addFromProjectBtn}
-                  onClick={() => addFieldFromProject(pf)}
-                >
-                  Добавить в форму
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      )}
+
+      {project && (
+        <div className={styles.section}>
+          <h2>Поля из проекта «{project.name}»</h2>
+          {projectFields.length === 0 ? (
+            <p className={styles.hint}>
+              В настройках проекта нет полей. Добавьте поля во вкладке «Настройки» проекта, затем вернитесь сюда.
+            </p>
+          ) : projectFieldsAvailable.length > 0 ? (
+            <>
+              <p className={styles.hint}>
+                Добавьте нужные поля в форму — ключ совпадёт со списком документов.
+              </p>
+              <ul className={styles.projectFieldList}>
+                {projectFieldsAvailable.map((pf, i) => (
+                  <li key={pf.key || i}>
+                    <span>{pf.label || pf.key} ({pf.field_type})</span>
+                    <button
+                      type="button"
+                      className={styles.addFromProjectBtn}
+                      onClick={() => addFieldFromProject(pf)}
+                    >
+                      Добавить в форму
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className={styles.hint}>
+              Все поля проекта уже добавлены в форму.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className={styles.section}>
         <h2>Поля формы</h2>
-        <p className={styles.hint}>Только поля, добавленные из проекта. Удалить поле из формы можно кнопкой ×.</p>
+        <p className={styles.hint}>Удалить поле из формы можно кнопкой ×.</p>
         <ul className={styles.fieldList}>
           {fields.map((f, i) => (
             <li

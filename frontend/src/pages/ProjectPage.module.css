@@ -1,0 +1,40 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 900px;
+}
+
+.title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  padding: 0.5rem 1rem;
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.tab:hover {
+  background: var(--color-border);
+}
+
+.tabActive {
+  composes: tab;
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+  font-weight: 500;
+  border-bottom: 2px solid var(--color-accent);
+  margin-bottom: -1px;
+}
+
+.content {
+  margin-top: 0;
+}

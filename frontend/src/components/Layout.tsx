@@ -55,7 +55,6 @@ export function Layout() {
               <Link to="/roles" className={isActive("/roles") ? styles.navLinkActive : styles.navLink}>Роли</Link>
               <Link to="/users" className={isActive("/users") ? styles.navLinkActive : styles.navLink}>Пользователи</Link>
               <Link to="/catalogs" className={isActive("/catalogs") ? styles.navLinkActive : styles.navLink}>Справочники</Link>
-              <Link to="/forms" className={isActive("/forms") ? styles.navLinkActive : styles.navLink}>Формы</Link>
               <Link to="/processes" className={isActive("/processes") ? styles.navLinkActive : styles.navLink}>Процессы</Link>
             </>
           )}

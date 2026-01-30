@@ -1,0 +1,55 @@
+.wrap {
+  padding: 0;
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  margin: 0 0 1rem;
+}
+
+.createLink {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-accent);
+  color: #fff;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.createLink:hover {
+  background: var(--color-accent-hover);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list li a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.list li a:hover {
+  text-decoration: underline;
+}
+
+.desc {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  margin: 1rem 0 0;
+}

@@ -23,10 +23,10 @@ function getColumnLabelByKey(project: ProjectResponse | null): Record<string, st
   return Object.fromEntries(options.map((o) => [o.key, o.label]));
 }
 
-/** Мапа value -> label для справочника (по value из items). */
+/** Мапа value -> label для справочника (ключ всегда строка для сопоставления с context). */
 function catalogValueToLabel(catalog: CatalogResponse | undefined): Record<string, string> {
   if (!catalog?.items?.length) return {};
-  return Object.fromEntries(catalog.items.map((i) => [i.value, i.label]));
+  return Object.fromEntries(catalog.items.map((i) => [String(i.value), i.label]));
 }
 
 function getDocumentCellValue(
@@ -96,6 +96,11 @@ export function ProjectDocuments() {
     ? project.list_columns.filter((k) => columnLabelByKey[k])
     : ["process_name", "status"];
 
+  const sortedList = useMemo(
+    () => [...list].sort((a, b) => (a.document_number ?? 0) - (b.document_number ?? 0)),
+    [list]
+  );
+
   if (!projectId) return <div className={styles.wrap}>Не указан проект.</div>;
   if (loading) return <div className={styles.wrap}>Загрузка…</div>;
   if (error) return <div className={styles.wrap}>Ошибка: {error}</div>;
@@ -109,7 +114,7 @@ export function ProjectDocuments() {
       <Link to={`/projects/${projectId}/documents/new`} className={styles.createLink}>
         Создать документ
       </Link>
-      {list.length > 0 ? (
+      {sortedList.length > 0 ? (
         <div className={styles.tableWrap}>
           <table className={styles.docTable}>
             <thead>
@@ -120,7 +125,7 @@ export function ProjectDocuments() {
               </tr>
             </thead>
             <tbody>
-              {list.map((d) => (
+              {sortedList.map((d) => (
                 <tr key={d.id}>
                   {columns.map((key) => (
                     <td key={key}>

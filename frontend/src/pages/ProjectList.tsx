@@ -35,15 +35,10 @@ export function ProjectList() {
       <ul className={styles.list}>
         {list.map((p) => (
           <li key={p.id}>
-            <Link to={`/projects/${p.id}/documents`} className={styles.link}>
+            <Link to={`/projects/${p.id}`} className={styles.link}>
               {p.name}
             </Link>
             {p.description && <span className={styles.desc}> — {p.description}</span>}
-            {isAdmin && (
-              <Link to={`/projects/${p.id}`} className={styles.editLink}>
-                Настройки
-              </Link>
-            )}
           </li>
         ))}
       </ul>
