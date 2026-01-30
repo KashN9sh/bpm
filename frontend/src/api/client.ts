@@ -186,6 +186,8 @@ export interface ProjectResponse {
 }
 
 const BASE_LIST_COLUMN_OPTIONS: { key: string; label: string }[] = [
+  { key: "document_number", label: "№ документа" },
+  { key: "id", label: "ID документа" },
   { key: "process_name", label: "Процесс" },
   { key: "status", label: "Статус" },
 ];
@@ -313,6 +315,7 @@ export interface CurrentFormResponse {
 
 export interface DocumentListItem {
   id: string;
+  document_number: number;
   process_definition_id: string;
   process_name: string;
   status: string;
@@ -345,6 +348,7 @@ export const runtime = {
   getInstance: (instanceId: string) =>
     api<{
       id: string;
+      document_number: number;
       process_definition_id: string;
       current_node_id: string | null;
       status: string;

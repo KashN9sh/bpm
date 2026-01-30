@@ -29,6 +29,16 @@ class RuntimeService:
     async def get_instance(self, instance_id: UUID) -> ProcessInstance | None:
         return await self._instance_repo.get_by_id(instance_id)
 
+    def _flatten_context(self, ctx: dict) -> dict:
+        """Сливает данные из всех узлов в один dict по ключам полей (для отображения в списке документов)."""
+        flat = {}
+        if not ctx:
+            return flat
+        for v in ctx.values():
+            if isinstance(v, dict):
+                flat.update(v)
+        return flat
+
     async def list_documents(self, project_id: UUID | None = None) -> list[dict]:
         """Список документов (экземпляров процессов). Если задан project_id — только из этого подпроекта."""
         instances = await self._instance_repo.list_all()
@@ -39,14 +49,18 @@ class RuntimeService:
         out = []
         for inst in instances:
             process = await self._process_repo.get_by_id(inst.process_definition_id)
+            # В списке отдаём «плоский» context: данные форм по шагам хранятся как context[node_id],
+            # для колонок нужны значения по ключам полей
+            flat_ctx = self._flatten_context(inst.context or {})
             out.append({
                 "id": str(inst.id),
+                "document_number": inst.document_number,
                 "process_definition_id": str(inst.process_definition_id),
                 "process_name": process.name if process else "",
                 "process_project_id": str(process.project_id) if process and process.project_id else None,
                 "status": inst.status.value,
                 "current_node_id": inst.current_node_id,
-                "context": inst.context or {},
+                "context": flat_ctx,
             })
         return out
 

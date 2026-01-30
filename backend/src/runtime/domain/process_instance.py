@@ -14,6 +14,7 @@ class InstanceStatus(str, Enum):
 @dataclass
 class ProcessInstance:
     id: UUID
+    document_number: int  # автоинкрементный № документа в БД
     process_definition_id: UUID
     current_node_id: str | None
     status: InstanceStatus

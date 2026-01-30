@@ -12,6 +12,7 @@ def _deserialize_instance(row: ProcessInstanceModel) -> ProcessInstance:
     context = json.loads(row.context) if row.context else {}
     return ProcessInstance(
         id=UUID(row.id),
+        document_number=getattr(row, "document_number", 0) or 0,
         process_definition_id=UUID(row.process_definition_id),
         current_node_id=row.current_node_id,
         status=InstanceStatus(row.status) if row.status else InstanceStatus.ACTIVE,

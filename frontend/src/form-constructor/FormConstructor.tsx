@@ -14,27 +14,6 @@ import type { CatalogResponse } from "../api/client";
 import { AccessConstructor } from "../access-constructor/AccessConstructor";
 import styles from "./FormConstructor.module.css";
 
-const FIELD_TYPES = [
-  "text",
-  "textarea",
-  "number",
-  "date",
-  "datetime",
-  "boolean",
-  "select",
-  "multiselect",
-] as const;
-
-const emptyField = (): FieldSchema => ({
-  name: "",
-  label: "",
-  field_type: "text",
-  required: false,
-  options: null,
-  validations: null,
-  access_rules: [],
-});
-
 export function FormConstructor() {
   const { formId } = useParams<{ formId: string }>();
   const navigate = useNavigate();
@@ -71,7 +50,7 @@ export function FormConstructor() {
       .then((f) => {
         setName(f.name);
         setDescription(f.description);
-        setFields(f.fields.length ? f.fields : [emptyField()]);
+        setFields(f.fields?.length ? f.fields : []);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -81,11 +60,6 @@ export function FormConstructor() {
     setFields((prev) =>
       prev.map((f, i) => (i === index ? { ...f, ...patch } : f))
     );
-  };
-
-  const addField = () => {
-    setFields((prev) => [...prev, emptyField()]);
-    setSelectedFieldIndex(fields.length);
   };
 
   const addFieldFromProject = (pf: ProjectFieldSchema) => {
@@ -173,7 +147,7 @@ export function FormConstructor() {
       <div className={styles.section}>
         <h2>Поля из проекта</h2>
         <p className={styles.hint}>
-          Выберите проект — его поля можно добавить в форму одним кликом (ключ поля совпадёт с полем в списке документов).
+          Форма использует только поля проекта. Выберите проект и добавьте нужные поля в форму (ключ совпадёт со списком документов).
         </p>
         <select
           value={selectedProjectId}
@@ -206,10 +180,8 @@ export function FormConstructor() {
       </div>
 
       <div className={styles.section}>
-        <h2>Поля</h2>
-        <button type="button" onClick={addField} className={styles.addBtn}>
-          Добавить поле
-        </button>
+        <h2>Поля формы</h2>
+        <p className={styles.hint}>Только поля, добавленные из проекта. Удалить поле из формы можно кнопкой ×.</p>
         <ul className={styles.fieldList}>
           {fields.map((f, i) => (
             <li
@@ -238,68 +210,12 @@ export function FormConstructor() {
 
       {selectedField && (
         <div className={styles.section}>
-          <h2>Поле: {selectedField.name || "—"}</h2>
+          <h2>Поле: {selectedField.label || selectedField.name || "—"}</h2>
           <div className={styles.fieldForm}>
-            <label>
-              Ключ (name)
-              <input
-                value={selectedField.name}
-                onChange={(e) =>
-                  updateField(selectedFieldIndex!, {
-                    name: e.target.value.replace(/\s/g, "_"),
-                  })
-                }
-                placeholder="field_name"
-              />
-            </label>
-            <label>
-              Подпись
-              <input
-                value={selectedField.label}
-                onChange={(e) =>
-                  updateField(selectedFieldIndex!, { label: e.target.value })
-                }
-                placeholder="Подпись"
-              />
-            </label>
-            <label>
-              Тип
-              <select
-                value={selectedField.field_type}
-                onChange={(e) =>
-                  updateField(selectedFieldIndex!, {
-                    field_type: e.target.value,
-                  })
-                }
-              >
-                {FIELD_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {(selectedField.field_type === "select" || selectedField.field_type === "multiselect") && (
-              <label>
-                Справочник (варианты выбора)
-                <select
-                  value={selectedField.catalog_id ?? ""}
-                  onChange={(e) =>
-                    updateField(selectedFieldIndex!, {
-                      catalog_id: e.target.value || undefined,
-                      options: e.target.value ? undefined : selectedField.options,
-                    })
-                  }
-                >
-                  <option value="">— Вручную (options в форме) —</option>
-                  {catalogList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+            <p className={styles.fieldReadOnly}>
+              Ключ: <strong>{selectedField.name}</strong> · Тип: {selectedField.field_type}
+              {selectedField.catalog_id && ` · Справочник: ${catalogList.find((c) => c.id === selectedField.catalog_id)?.name ?? selectedField.catalog_id}`}
+            </p>
             <label className={styles.checkLabel}>
               <input
                 type="checkbox"

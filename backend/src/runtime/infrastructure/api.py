@@ -35,6 +35,7 @@ class SubmitFormRequest(BaseModel):
 
 class InstanceResponse(BaseModel):
     id: str
+    document_number: int
     process_definition_id: str
     current_node_id: str | None
     status: str
@@ -43,6 +44,7 @@ class InstanceResponse(BaseModel):
 
 class DocumentListItem(BaseModel):
     id: str
+    document_number: int
     process_definition_id: str
     process_name: str
     status: str
@@ -207,6 +209,7 @@ async def get_instance(
         raise HTTPException(status_code=404, detail="Instance not found")
     return InstanceResponse(
         id=str(instance.id),
+        document_number=instance.document_number,
         process_definition_id=str(instance.process_definition_id),
         current_node_id=instance.current_node_id,
         status=instance.status.value,

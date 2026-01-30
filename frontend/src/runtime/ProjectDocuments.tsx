@@ -22,6 +22,8 @@ function getColumnLabelByKey(project: ProjectResponse | null): Record<string, st
 }
 
 function getDocumentCellValue(d: DocumentListItem, key: string): string {
+  if (key === "document_number") return d.document_number != null ? String(d.document_number) : "";
+  if (key === "id") return d.id || "";
   if (key === "process_name") return d.process_name || "Без названия";
   if (key === "status") return statusLabel[d.status] ?? d.status;
   const ctx = d.context ?? {};
@@ -84,7 +86,7 @@ export function ProjectDocuments() {
                 <tr key={d.id}>
                   {columns.map((key) => (
                     <td key={key}>
-                      {key === "process_name" ? (
+                      {key === "document_number" || key === "id" || key === "process_name" ? (
                         <Link to={`/documents/${d.id}`} className={styles.docLink}>
                           {getDocumentCellValue(d, key)}
                         </Link>
