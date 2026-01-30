@@ -1,0 +1,90 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  padding: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #ddd;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.nameInput {
+  padding: 0.4rem 0.5rem;
+  min-width: 180px;
+}
+
+.descInput {
+  padding: 0.4rem 0.5rem;
+  flex: 1;
+  min-width: 120px;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.error {
+  padding: 0.5rem 1rem;
+  background: #ffebee;
+  color: #c62828;
+}
+
+.flowWrap {
+  flex: 1;
+  min-height: 300px;
+}
+
+.addNodes {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.addNodes button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.sidebar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  padding: 1rem;
+  border-left: 1px solid #ddd;
+  background: #fafafa;
+  overflow-y: auto;
+}
+
+.sidebar h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.sidebar label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.sidebar input,
+.sidebar select {
+  width: 100%;
+  padding: 0.4rem;
+  margin-top: 0.25rem;
+}

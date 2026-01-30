@@ -1,0 +1,228 @@
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+function getToken(): string | null {
+  return localStorage.getItem("token");
+}
+
+export async function api<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getToken();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+export const identity = {
+  login: (email: string, password: string) =>
+    api<{ access_token: string }>("/api/identity/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => api<{ id: string; email: string }>("/api/identity/users/me"),
+  createUser: (email: string, password: string, role_ids?: string[]) =>
+    api<{ id: string; email: string }>("/api/identity/users", {
+      method: "POST",
+      body: JSON.stringify({ email, password, role_ids }),
+    }),
+  listRoles: () => api<{ id: string; name: string }[]>("/api/identity/roles"),
+  createRole: (name: string) =>
+    api<{ id: string; name: string }>("/api/identity/roles", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+};
+
+function requireFormId(id: string | undefined): asserts id is string {
+  if (id == null || id === "" || id === "undefined") {
+    throw new Error("Form ID is required");
+  }
+}
+
+export const forms = {
+  list: () => api<FormResponse[]>("/api/forms"),
+  get: (id: string) => {
+    requireFormId(id);
+    return api<FormResponse>(`/api/forms/${id}`);
+  },
+  create: (body: FormCreate) =>
+    api<FormResponse>("/api/forms", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: FormUpdate) => {
+    requireFormId(id);
+    return api<FormResponse>(`/api/forms/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+  delete: (id: string) => {
+    requireFormId(id);
+    return api<void>(`/api/forms/${id}`, { method: "DELETE" });
+  },
+};
+
+export interface FieldAccessRuleSchema {
+  role_id?: string | null;
+  expression?: string | null;
+  permission: string;
+}
+
+export interface FieldSchema {
+  name: string;
+  label: string;
+  field_type: string;
+  required: boolean;
+  options?: { value: string; label: string }[] | null;
+  validations?: Record<string, unknown> | null;
+  access_rules?: FieldAccessRuleSchema[] | null;
+}
+
+export interface FormResponse {
+  id: string;
+  name: string;
+  description: string;
+  fields: FieldSchema[];
+}
+
+export interface FormCreate {
+  name: string;
+  description?: string;
+  fields?: FieldSchema[];
+}
+
+export interface FormUpdate {
+  name?: string;
+  description?: string;
+  fields?: FieldSchema[];
+}
+
+// Process Design API
+export interface ProcessNodeSchema {
+  id: string;
+  node_type: string;
+  label: string;
+  form_definition_id?: string | null;
+  position_x: number;
+  position_y: number;
+  expression?: string | null;
+}
+
+export interface ProcessEdgeSchema {
+  id: string;
+  source_node_id: string;
+  target_node_id: string;
+  label: string;
+  condition_expression?: string | null;
+}
+
+export interface ProcessResponse {
+  id: string;
+  name: string;
+  description: string;
+  version: number;
+  nodes: ProcessNodeSchema[];
+  edges: ProcessEdgeSchema[];
+}
+
+export interface ProcessCreate {
+  name: string;
+  description?: string;
+  nodes?: ProcessNodeSchema[];
+  edges?: ProcessEdgeSchema[];
+}
+
+export interface ProcessUpdate {
+  name?: string;
+  description?: string;
+  nodes?: ProcessNodeSchema[];
+  edges?: ProcessEdgeSchema[];
+}
+
+export const processes = {
+  list: () => api<ProcessResponse[]>("/api/processes"),
+  get: (id: string) => api<ProcessResponse>(`/api/processes/${id}`),
+  create: (body: ProcessCreate) =>
+    api<ProcessResponse>("/api/processes", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: ProcessUpdate) =>
+    api<ProcessResponse>(`/api/processes/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) =>
+    api<void>(`/api/processes/${id}`, { method: "DELETE" }),
+};
+
+// Runtime API
+export interface CurrentFormResponse {
+  instance_id: string;
+  node_id: string;
+  form_definition: {
+    id: string;
+    name: string;
+    description: string;
+    fields: Array<{
+      name: string;
+      label: string;
+      field_type: string;
+      required: boolean;
+      options?: { value: string; label: string }[] | null;
+      validations?: Record<string, unknown> | null;
+    }>;
+  };
+  submission_data: Record<string, unknown> | null;
+}
+
+export interface DocumentListItem {
+  id: string;
+  process_definition_id: string;
+  process_name: string;
+  status: string;
+  current_node_id: string | null;
+}
+
+export const runtime = {
+  listDocuments: () =>
+    api<DocumentListItem[]>("/api/runtime/documents"),
+  startProcess: (processDefinitionId: string) =>
+    api<{ instance_id: string; current_node_id: string; status: string }>(
+      `/api/runtime/processes/${processDefinitionId}/start`,
+      { method: "POST" }
+    ),
+  getCurrentForm: (instanceId: string) =>
+    api<CurrentFormResponse>(`/api/runtime/instances/${instanceId}/current-form`),
+  submitForm: (instanceId: string, nodeId: string, data: Record<string, unknown>) =>
+    api<{
+      instance_id: string;
+      status: string;
+      current_node_id: string | null;
+      completed: boolean;
+    }>(`/api/runtime/instances/${instanceId}/nodes/${nodeId}/submit`, {
+      method: "POST",
+      body: JSON.stringify({ data }),
+    }),
+  getInstance: (instanceId: string) =>
+    api<{
+      id: string;
+      process_definition_id: string;
+      current_node_id: string | null;
+      status: string;
+      context: Record<string, unknown>;
+    }>(`/api/runtime/instances/${instanceId}`),
+};

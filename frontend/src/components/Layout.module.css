@@ -1,0 +1,25 @@
+.root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav {
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav a {
+  color: var(--link, #0a7ea4);
+  text-decoration: none;
+}
+
+.nav a:hover {
+  text-decoration: underline;
+}
+
+.main {
+  flex: 1;
+}

@@ -1,0 +1,16 @@
+.wrap {
+  padding: 2rem 1.5rem;
+}
+
+.wrap ul {
+  list-style: none;
+  padding: 0;
+}
+
+.wrap li {
+  margin-bottom: 0.5rem;
+}
+
+.wrap a {
+  color: var(--link, #0a7ea4);
+}

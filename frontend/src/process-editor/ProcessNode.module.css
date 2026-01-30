@@ -1,0 +1,66 @@
+.node {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 2px solid #555;
+  min-width: 100px;
+  text-align: center;
+  background: #fff;
+}
+
+.node.start {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+}
+
+.node.step {
+  border-color: #1565c0;
+  background: #e3f2fd;
+}
+
+.node.gateway {
+  border-color: #f9a825;
+  background: #fff8e1;
+  transform: rotate(-45deg);
+  min-width: 80px;
+}
+
+.node.gateway .label,
+.node.gateway .typeLabel {
+  transform: rotate(45deg);
+}
+
+.node.end {
+  border-color: #c62828;
+  background: #ffebee;
+}
+
+.typeLabel {
+  font-size: 0.7rem;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.handle {
+  width: 8px;
+  height: 8px;
+  background: #555;
+}
+
+.node.start .handle,
+.node.end .handle {
+  background: #2e7d32;
+}
+
+.node.step .handle {
+  background: #1565c0;
+}
+
+.node.gateway .handle {
+  background: #f9a825;
+}

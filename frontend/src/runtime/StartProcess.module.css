@@ -1,0 +1,34 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 560px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+.name {
+  font-weight: 500;
+  min-width: 140px;
+}
+
+.desc {
+  color: #666;
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.list button {
+  padding: 0.4rem 0.75rem;
+}

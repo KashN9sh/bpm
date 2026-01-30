@@ -1,0 +1,35 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 560px;
+}
+
+.desc {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field span {
+  font-weight: 500;
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 0.5rem;
+}
+
+.actions {
+  margin-top: 1rem;
+}

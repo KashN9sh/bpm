@@ -1,0 +1,27 @@
+.wrap {
+  padding: 2rem;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.form label {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.form input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.form button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  width: 100%;
+}
+
+.error {
+  color: #c00;
+  margin-bottom: 1rem;
+}

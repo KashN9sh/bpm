@@ -1,0 +1,187 @@
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from src.database import get_session
+from src.runtime.application.runtime_service import RuntimeService
+from src.rules.evaluator import evaluate_field_access
+from src.runtime.infrastructure.repository import ProcessInstanceRepository, FormSubmissionRepository
+from src.process_design.infrastructure.repository import ProcessDefinitionRepository
+from src.form_builder.infrastructure.repository import FormDefinitionRepository
+
+router = APIRouter(prefix="/api/runtime", tags=["runtime"])
+
+
+class StartProcessResponse(BaseModel):
+    instance_id: str
+    current_node_id: str
+    status: str
+
+
+class CurrentFormResponse(BaseModel):
+    instance_id: str
+    node_id: str
+    form_definition: dict
+    submission_data: dict | None
+
+
+class SubmitFormRequest(BaseModel):
+    data: dict
+
+
+class InstanceResponse(BaseModel):
+    id: str
+    process_definition_id: str
+    current_node_id: str | None
+    status: str
+    context: dict
+
+
+class DocumentListItem(BaseModel):
+    id: str
+    process_definition_id: str
+    process_name: str
+    status: str
+    current_node_id: str | None
+
+
+def get_instance_repo(session=Depends(get_session)) -> ProcessInstanceRepository:
+    return ProcessInstanceRepository(session)
+
+
+def get_submission_repo(session=Depends(get_session)) -> FormSubmissionRepository:
+    return FormSubmissionRepository(session)
+
+
+def get_process_repo(session=Depends(get_session)) -> ProcessDefinitionRepository:
+    return ProcessDefinitionRepository(session)
+
+
+def get_form_repo(session=Depends(get_session)) -> FormDefinitionRepository:
+    return FormDefinitionRepository(session)
+
+
+def get_runtime_service(
+    instance_repo: ProcessInstanceRepository = Depends(get_instance_repo),
+    submission_repo: FormSubmissionRepository = Depends(get_submission_repo),
+    process_repo: ProcessDefinitionRepository = Depends(get_process_repo),
+    form_repo: FormDefinitionRepository = Depends(get_form_repo),
+) -> RuntimeService:
+    return RuntimeService(
+        instance_repo=instance_repo,
+        submission_repo=submission_repo,
+        process_repo=process_repo,
+        form_repo=form_repo,
+    )
+
+
+def _form_to_dict(form, context: dict | None = None):
+    role_ids = (context or {}).get("role_ids", [])
+    ctx = {**(context or {}), "role_ids": role_ids}
+    fields_out = []
+    for f in form.fields:
+        rules = [
+            {"role_id": r.role_id, "expression": r.expression, "permission": r.permission.value}
+            for r in (f.access_rules or [])
+        ]
+        permission = evaluate_field_access(rules, ctx, "write")
+        if permission == "hidden":
+            continue
+        fields_out.append({
+            "name": f.name,
+            "label": f.label,
+            "field_type": f.field_type.value,
+            "required": f.required,
+            "options": f.options,
+            "validations": f.validations,
+            "read_only": permission == "read",
+        })
+    return {
+        "id": str(form.id),
+        "name": form.name,
+        "description": form.description,
+        "fields": fields_out,
+    }
+
+
+@router.get("/documents", response_model=list[DocumentListItem])
+async def list_documents(service: RuntimeService = Depends(get_runtime_service)):
+    return await service.list_documents()
+
+
+@router.post("/processes/{process_definition_id}/start", response_model=StartProcessResponse)
+async def start_process(
+    process_definition_id: UUID,
+    service: RuntimeService = Depends(get_runtime_service),
+):
+    instance = await service.start_process(process_definition_id)
+    if not instance:
+        raise HTTPException(status_code=400, detail="Process not found or has no start node")
+    return StartProcessResponse(
+        instance_id=str(instance.id),
+        current_node_id=instance.current_node_id or "",
+        status=instance.status.value,
+    )
+
+
+@router.get("/instances/{instance_id}/current-form", response_model=CurrentFormResponse)
+async def get_current_form(
+    instance_id: UUID,
+    service: RuntimeService = Depends(get_runtime_service),
+):
+    result = await service.get_current_form(instance_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="No current form or process completed")
+    form = result["form"]
+    node_id = result["node_id"]
+    instance = result["instance"]
+    role_ids = result.get("role_ids") or []
+    context = {**instance.context, "role_ids": role_ids}
+    submission_data = await service.get_submission_data(instance_id, node_id)
+    return CurrentFormResponse(
+        instance_id=str(instance.id),
+        node_id=node_id,
+        form_definition=_form_to_dict(form, context),
+        submission_data=submission_data,
+    )
+
+
+@router.post("/instances/{instance_id}/nodes/{node_id}/submit")
+async def submit_form(
+  instance_id: UUID,
+  node_id: str,
+  body: SubmitFormRequest,
+  service: RuntimeService = Depends(get_runtime_service),
+):
+    result = await service.get_current_form(instance_id)
+    if not result or result["node_id"] != node_id:
+        raise HTTPException(status_code=400, detail="Invalid step or process state")
+    form = result["form"]
+    form_def_id = form.id
+    instance = await service.submit_form(instance_id, node_id, form_def_id, body.data)
+    if not instance:
+        raise HTTPException(status_code=400, detail="Submit failed")
+    return {
+        "instance_id": str(instance.id),
+        "status": instance.status.value,
+        "current_node_id": instance.current_node_id,
+        "completed": instance.is_completed,
+    }
+
+
+@router.get("/instances/{instance_id}", response_model=InstanceResponse)
+async def get_instance(
+    instance_id: UUID,
+    service: RuntimeService = Depends(get_runtime_service),
+):
+    instance = await service.get_instance(instance_id)
+    if not instance:
+        raise HTTPException(status_code=404, detail="Instance not found")
+    return InstanceResponse(
+        id=str(instance.id),
+        process_definition_id=str(instance.process_definition_id),
+        current_node_id=instance.current_node_id,
+        status=instance.status.value,
+        context=instance.context,
+    )
