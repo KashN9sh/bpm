@@ -173,17 +173,23 @@ export interface ProjectResponse {
   name: string;
   description: string;
   sort_order: number;
+  list_columns: string[];
 }
+
+export const LIST_COLUMN_OPTIONS: { key: string; label: string }[] = [
+  { key: "process_name", label: "Процесс" },
+  { key: "status", label: "Статус" },
+];
 
 export const projects = {
   list: () => api<ProjectResponse[]>("/api/projects"),
   get: (id: string) => api<ProjectResponse>(`/api/projects/${id}`),
-  create: (body: { name: string; description?: string; sort_order?: number }) =>
+  create: (body: { name: string; description?: string; sort_order?: number; list_columns?: string[] }) =>
     api<ProjectResponse>("/api/projects", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (id: string, body: { name?: string; description?: string; sort_order?: number }) =>
+  update: (id: string, body: { name?: string; description?: string; sort_order?: number; list_columns?: string[] }) =>
     api<ProjectResponse>(`/api/projects/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),

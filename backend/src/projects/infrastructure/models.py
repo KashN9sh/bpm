@@ -3,6 +3,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from src.identity.infrastructure.models import Base, gen_uuid
 
+_DEFAULT_LIST_COLUMNS = '["process_name", "status"]'
+
 
 class ProjectModel(Base):
     __tablename__ = "projects"
@@ -11,3 +13,4 @@ class ProjectModel(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    list_columns: Mapped[str] = mapped_column(Text, nullable=False, default=_DEFAULT_LIST_COLUMNS)

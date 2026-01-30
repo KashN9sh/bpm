@@ -15,12 +15,14 @@ class ProjectCreate(BaseModel):
     name: str
     description: str = ""
     sort_order: int = 0
+    list_columns: list[str] = ["process_name", "status"]
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     sort_order: int | None = None
+    list_columns: list[str] | None = None
 
 
 class ProjectResponse(BaseModel):
@@ -28,6 +30,7 @@ class ProjectResponse(BaseModel):
     name: str
     description: str
     sort_order: int
+    list_columns: list[str]
 
 
 def get_project_repo(session=Depends(get_session)) -> ProjectRepository:
@@ -40,6 +43,7 @@ def _to_response(p) -> ProjectResponse:
         name=p.name,
         description=p.description,
         sort_order=p.sort_order,
+        list_columns=getattr(p, "list_columns", None) or ["process_name", "status"],
     )
 
 
@@ -53,6 +57,7 @@ async def create_project(
         name=body.name,
         description=body.description,
         sort_order=body.sort_order,
+        list_columns=body.list_columns,
     )
     return _to_response(project)
 
@@ -90,6 +95,7 @@ async def update_project(
         name=body.name,
         description=body.description,
         sort_order=body.sort_order,
+        list_columns=body.list_columns,
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 
@@ -9,3 +9,4 @@ class Project:
     name: str
     description: str = ""
     sort_order: int = 0
+    list_columns: list[str] = field(default_factory=lambda: ["process_name", "status"])

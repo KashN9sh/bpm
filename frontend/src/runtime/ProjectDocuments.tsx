@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { runtime, projects, type DocumentListItem } from "../api/client";
+import { runtime, projects, LIST_COLUMN_OPTIONS, type DocumentListItem, type ProjectResponse } from "../api/client";
 import styles from "./DocumentList.module.css";
 
 const statusLabel: Record<string, string> = {
@@ -10,16 +10,26 @@ const statusLabel: Record<string, string> = {
   cancelled: "Отменён",
 };
 
+const columnLabelByKey: Record<string, string> = Object.fromEntries(
+  LIST_COLUMN_OPTIONS.map((o) => [o.key, o.label])
+);
+
+function getDocumentCellValue(d: DocumentListItem, key: string): string {
+  if (key === "process_name") return d.process_name || "Без названия";
+  if (key === "status") return statusLabel[d.status] ?? d.status;
+  return (d as Record<string, unknown>)[key] != null ? String((d as Record<string, unknown>)[key]) : "";
+}
+
 export function ProjectDocuments() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [projectName, setProjectName] = useState<string>("");
+  const [project, setProject] = useState<ProjectResponse | null>(null);
   const [list, setList] = useState<DocumentListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) return;
-    projects.get(projectId).then((p) => setProjectName(p.name)).catch(() => setProjectName(""));
+    projects.get(projectId).then(setProject).catch(() => setProject(null));
   }, [projectId]);
 
   useEffect(() => {
@@ -32,29 +42,53 @@ export function ProjectDocuments() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
+  const columns = project?.list_columns?.length
+    ? project.list_columns.filter((k) => columnLabelByKey[k])
+    : ["process_name", "status"];
+
   if (!projectId) return <div className={styles.wrap}>Не указан проект.</div>;
   if (loading) return <div className={styles.wrap}>Загрузка…</div>;
   if (error) return <div className={styles.wrap}>Ошибка: {error}</div>;
 
   return (
     <div className={styles.wrap}>
-      <h1>{projectName || "Документы проекта"}</h1>
+      <h1>{project?.name || "Документы проекта"}</h1>
       <p className={styles.intro}>
         Документ — экземпляр процесса: форма движется по шагам процесса.
       </p>
       <Link to={`/projects/${projectId}/documents/new`} className={styles.createLink}>
         Создать документ
       </Link>
-      <ul className={styles.list}>
-        {list.map((d) => (
-          <li key={d.id}>
-            <Link to={`/documents/${d.id}`} className={styles.docLink}>
-              {d.process_name || "Без названия"} — {statusLabel[d.status] ?? d.status}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      {list.length === 0 && (
+      {list.length > 0 ? (
+        <div className={styles.tableWrap}>
+          <table className={styles.docTable}>
+            <thead>
+              <tr>
+                {columns.map((key) => (
+                  <th key={key}>{columnLabelByKey[key] ?? key}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((d) => (
+                <tr key={d.id}>
+                  {columns.map((key) => (
+                    <td key={key}>
+                      {key === "process_name" ? (
+                        <Link to={`/documents/${d.id}`} className={styles.docLink}>
+                          {getDocumentCellValue(d, key)}
+                        </Link>
+                      ) : (
+                        getDocumentCellValue(d, key)
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
         <p className={styles.empty}>
           Нет документов. Нажмите «Создать документ», выберите процесс и заполняйте формы по шагам.
         </p>
