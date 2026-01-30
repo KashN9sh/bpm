@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Layout } from "./components/Layout";
 import { Home } from "./pages/Home";
@@ -9,9 +9,10 @@ import { ProjectList } from "./pages/ProjectList";
 import { ProjectPage } from "./pages/ProjectPage";
 import { ProjectEditor } from "./pages/ProjectEditor";
 import { ProjectForms } from "./pages/ProjectForms";
+import { ProjectProcesses } from "./pages/ProjectProcesses";
 import { FormList, FormConstructor } from "./form-constructor";
 import { CatalogList, CatalogEditor } from "./catalogs";
-import { ProcessEditor, ProcessList } from "./process-editor";
+import { ProcessEditor } from "./process-editor";
 import { DocumentList } from "./runtime/DocumentList";
 import { ProjectDocuments } from "./runtime/ProjectDocuments";
 import { StartProcess } from "./runtime/StartProcess";
@@ -38,10 +39,11 @@ function App() {
             <Route index element={<ProjectEditor />} />
             <Route path="settings" element={<ProjectEditor />} />
             <Route path="forms" element={<ProjectForms />} />
+            <Route path="processes" element={<ProjectProcesses />} />
           </Route>
           <Route path="projects/:projectId/documents" element={<ProjectDocuments />} />
           <Route path="projects/:projectId/documents/new" element={<StartProcess />} />
-          <Route path="processes" element={<ProcessList />} />
+          <Route path="processes" element={<Navigate to="/projects" replace />} />
           <Route path="processes/new" element={<ProcessEditor />} />
           <Route path="processes/:processId" element={<ProcessEditor />} />
           <Route path="documents" element={<DocumentList />} />

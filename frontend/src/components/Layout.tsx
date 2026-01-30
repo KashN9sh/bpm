@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   PanelLeftClose,
   PanelLeft,
@@ -8,7 +8,6 @@ import {
   Shield,
   Users,
   BookOpen,
-  GitBranch,
   LogOut,
   LogIn,
 } from "lucide-react";
@@ -24,6 +23,7 @@ export function Layout() {
   const { user, loading, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [projectList, setProjectList] = useState<ProjectResponse[]>([]);
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -77,7 +77,8 @@ export function Layout() {
           {projectList.map((p) => {
             const isProjectActive =
               location.pathname === `/projects/${p.id}` ||
-              location.pathname.startsWith(`/projects/${p.id}/`);
+              location.pathname.startsWith(`/projects/${p.id}/`) ||
+              (location.pathname.startsWith("/processes") && searchParams.get("projectId") === p.id);
             return (
             <Link
               key={p.id}
@@ -116,10 +117,6 @@ export function Layout() {
               <Link to="/catalogs" className={isActive("/catalogs") ? styles.navLinkActive : styles.navLink} title={collapsed ? "Справочники" : undefined}>
                 <span className={styles.navLinkIcon} aria-hidden><BookOpen size={ICON_SIZE} /></span>
                 <span className={styles.navLinkText}>Справочники</span>
-              </Link>
-              <Link to="/processes" className={isActive("/processes") ? styles.navLinkActive : styles.navLink} title={collapsed ? "Процессы" : undefined}>
-                <span className={styles.navLinkIcon} aria-hidden><GitBranch size={ICON_SIZE} /></span>
-                <span className={styles.navLinkText}>Процессы</span>
               </Link>
             </>
           )}

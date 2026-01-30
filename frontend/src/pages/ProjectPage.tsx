@@ -43,6 +43,12 @@ export function ProjectPage() {
         >
           Формы
         </NavLink>
+        <NavLink
+          to={`/projects/${projectId}/processes`}
+          className={({ isActive }) => (isActive ? styles.tabActive : styles.tab)}
+        >
+          Процессы
+        </NavLink>
       </nav>
       <div className={styles.content}>
         <Outlet />

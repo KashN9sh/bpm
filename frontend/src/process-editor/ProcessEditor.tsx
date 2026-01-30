@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   ReactFlow,
   Controls,
@@ -18,11 +18,9 @@ import "@xyflow/react/dist/style.css";
 import {
   processes,
   forms,
-  projects,
   type ProcessNodeSchema,
   type ProcessEdgeSchema,
   type FormResponse,
-  type ProjectResponse,
 } from "../api/client";
 import { ProcessNode } from "./ProcessNode";
 import styles from "./ProcessEditor.module.css";
@@ -84,7 +82,12 @@ function fromFlowEdges(edges: Edge[]): ProcessEdgeSchema[] {
 export function ProcessEditor() {
   const { processId } = useParams<{ processId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isNew = !processId || processId === "new";
+  const projectIdFromUrl = searchParams.get("projectId");
+  const projectIdFromState = (location.state as { projectId?: string } | null)?.projectId;
+  const projectIdFromContext = projectIdFromUrl || projectIdFromState;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -92,7 +95,6 @@ export function ProcessEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [formList, setFormList] = useState<FormResponse[]>([]);
-  const [projectList, setProjectList] = useState<ProjectResponse[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,14 +102,13 @@ export function ProcessEditor() {
 
   useEffect(() => {
     forms.list().then(setFormList).catch(() => setFormList([]));
-    projects.list().then(setProjectList).catch(() => setProjectList([]));
   }, []);
 
   useEffect(() => {
     if (isNew) {
       setName("");
       setDescription("");
-      setProjectId(null);
+      setProjectId(projectIdFromContext ?? null);
       setNodes([
         {
           id: "start-1",
@@ -132,7 +133,7 @@ export function ProcessEditor() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [processId, isNew]);
+  }, [processId, isNew, projectIdFromContext]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -162,7 +163,13 @@ export function ProcessEditor() {
     try {
       if (isNew) {
         const created = await processes.create(payload);
-        navigate(`/processes/${created.id}`, { replace: true });
+        const backUrl = projectIdFromContext
+          ? `/processes/${created.id}?projectId=${encodeURIComponent(projectIdFromContext)}`
+          : `/processes/${created.id}`;
+        navigate(backUrl, {
+          replace: true,
+          state: projectIdFromContext ? { projectId: projectIdFromContext } : undefined,
+        });
       } else {
         await processes.update(processId!, payload);
       }
@@ -208,29 +215,18 @@ export function ProcessEditor() {
             placeholder="Описание"
             className={styles.descInput}
           />
-          {projectList.length > 0 && (
-            <label className={styles.projectLabel}>
-              Проект
-              <select
-                value={projectId ?? ""}
-                onChange={(e) => setProjectId(e.target.value || null)}
-                className={styles.projectSelect}
-              >
-                <option value="">— Не выбран —</option>
-                {projectList.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
         </div>
         <div className={styles.actions}>
           <button type="button" onClick={save} disabled={saving}>
             {saving ? "Сохранение…" : "Сохранить"}
           </button>
-          <button type="button" onClick={() => navigate("/processes")}>
+          <button
+            type="button"
+            onClick={() => {
+              const pid = projectIdFromContext || projectId;
+              navigate(pid ? `/projects/${pid}/processes` : "/projects");
+            }}
+          >
             К списку
           </button>
         </div>

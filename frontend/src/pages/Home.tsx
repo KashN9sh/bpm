@@ -7,7 +7,6 @@ const sections = [
   { to: "/roles", title: "Роли", desc: "Создание ролей для доступа к полям.", admin: true },
   { to: "/users", title: "Пользователи", desc: "Пользователи и назначение ролей.", admin: true },
   { to: "/catalogs", title: "Справочники", desc: "Варианты для полей «Выбор» и «Множественный выбор».", admin: true },
-  { to: "/processes", title: "Процессы", desc: "Диаграмма шагов и переходов.", admin: true },
 ];
 
 export function Home() {
