@@ -7,6 +7,7 @@ from src.identity.infrastructure.models import Base
 from src.form_builder.infrastructure.models import FormDefinitionModel  # noqa: F401 - register table
 from src.process_design.infrastructure.models import ProcessDefinitionModel  # noqa: F401 - register table
 from src.runtime.infrastructure.models import ProcessInstanceModel, FormSubmissionModel  # noqa: F401 - register tables
+from src.catalogs.infrastructure.models import CatalogModel  # noqa: F401 - register table
 
 engine = create_async_engine(
     settings.database_url,

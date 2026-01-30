@@ -1,0 +1,46 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 560px;
+}
+
+.intro {
+  color: #555;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.form input {
+  flex: 1;
+  padding: 0.5rem;
+}
+
+.form button {
+  padding: 0.5rem 1rem;
+}
+
+.error {
+  color: #c00;
+  margin-bottom: 1rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.empty {
+  color: #666;
+  margin-top: 1rem;
+}

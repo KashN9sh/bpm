@@ -36,6 +36,7 @@ class FieldDefinition:
     field_type: FieldType
     required: bool = False
     options: list[dict[str, Any]] | None = None  # для select/multiselect: [{"value": "a", "label": "A"}]
+    catalog_id: str | None = None  # если задан — варианты берутся из справочника (options игнорируются при отдаче)
     validations: dict[str, Any] | None = None  # e.g. {"min": 0, "max": 100}
     access_rules: list[FieldAccessRule] = field(default_factory=list)  # правила видимости/редактирования
 

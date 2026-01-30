@@ -9,6 +9,7 @@ from src.rules.evaluator import evaluate_field_access
 from src.runtime.infrastructure.repository import ProcessInstanceRepository, FormSubmissionRepository
 from src.process_design.infrastructure.repository import ProcessDefinitionRepository
 from src.form_builder.infrastructure.repository import FormDefinitionRepository
+from src.catalogs.infrastructure.repository import CatalogRepository
 
 router = APIRouter(prefix="/api/runtime", tags=["runtime"])
 
@@ -62,6 +63,10 @@ def get_form_repo(session=Depends(get_session)) -> FormDefinitionRepository:
     return FormDefinitionRepository(session)
 
 
+def get_catalog_repo(session=Depends(get_session)) -> CatalogRepository:
+    return CatalogRepository(session)
+
+
 def get_runtime_service(
     instance_repo: ProcessInstanceRepository = Depends(get_instance_repo),
     submission_repo: FormSubmissionRepository = Depends(get_submission_repo),
@@ -76,7 +81,7 @@ def get_runtime_service(
     )
 
 
-def _form_to_dict(form, context: dict | None = None):
+async def _form_to_dict(form, context: dict | None = None, catalog_repo: CatalogRepository | None = None):
     role_ids = (context or {}).get("role_ids", [])
     ctx = {**(context or {}), "role_ids": role_ids}
     fields_out = []
@@ -88,12 +93,20 @@ def _form_to_dict(form, context: dict | None = None):
         permission = evaluate_field_access(rules, ctx, "write")
         if permission == "hidden":
             continue
+        options = f.options
+        if f.catalog_id and catalog_repo:
+            try:
+                catalog = await catalog_repo.get_by_id(UUID(f.catalog_id))
+                if catalog:
+                    options = [{"value": i.value, "label": i.label} for i in catalog.items]
+            except (ValueError, TypeError):
+                pass
         fields_out.append({
             "name": f.name,
             "label": f.label,
             "field_type": f.field_type.value,
             "required": f.required,
-            "options": f.options,
+            "options": options,
             "validations": f.validations,
             "read_only": permission == "read",
         })
@@ -129,6 +142,7 @@ async def start_process(
 async def get_current_form(
     instance_id: UUID,
     service: RuntimeService = Depends(get_runtime_service),
+    catalog_repo: CatalogRepository = Depends(get_catalog_repo),
 ):
     result = await service.get_current_form(instance_id)
     if not result:
@@ -139,10 +153,11 @@ async def get_current_form(
     role_ids = result.get("role_ids") or []
     context = {**instance.context, "role_ids": role_ids}
     submission_data = await service.get_submission_data(instance_id, node_id)
+    form_def = await _form_to_dict(form, context, catalog_repo)
     return CurrentFormResponse(
         instance_id=str(instance.id),
         node_id=node_id,
-        form_definition=_form_to_dict(form, context),
+        form_definition=form_def,
         submission_data=submission_data,
     )
 

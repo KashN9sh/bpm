@@ -22,6 +22,7 @@ class FieldSchema(BaseModel):
     field_type: str = "text"
     required: bool = False
     options: list[dict] | None = None
+    catalog_id: str | None = None
     validations: dict | None = None
     access_rules: list[FieldAccessRuleSchema] | None = None
 
@@ -54,6 +55,7 @@ def _form_to_response(form) -> FormResponse:
             "field_type": f.field_type.value,
             "required": f.required,
             "options": f.options,
+            "catalog_id": f.catalog_id,
             "validations": f.validations,
             "access_rules": [
                 {"role_id": r.role_id, "expression": r.expression, "permission": r.permission.value}

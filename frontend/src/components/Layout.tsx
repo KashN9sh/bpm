@@ -6,6 +6,8 @@ export function Layout() {
     <div className={styles.root}>
       <nav className={styles.nav}>
         <Link to="/">Главная</Link>
+        <Link to="/roles">Роли</Link>
+        <Link to="/catalogs">Справочники</Link>
         <Link to="/forms">Формы</Link>
         <Link to="/processes">Процессы</Link>
         <Link to="/documents">Документы</Link>

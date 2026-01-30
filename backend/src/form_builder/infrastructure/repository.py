@@ -15,6 +15,7 @@ def _serialize_field(f: FieldDefinition) -> dict:
         "field_type": f.field_type.value,
         "required": f.required,
         "options": f.options,
+        "catalog_id": f.catalog_id,
         "validations": f.validations,
         "access_rules": [
             {"role_id": r.role_id, "expression": r.expression, "permission": r.permission.value}
@@ -38,6 +39,7 @@ def _deserialize_field(d: dict) -> FieldDefinition:
         field_type=FieldType(d.get("field_type", "text")),
         required=d.get("required", False),
         options=d.get("options"),
+        catalog_id=d.get("catalog_id"),
         validations=d.get("validations"),
         access_rules=access_rules,
     )
