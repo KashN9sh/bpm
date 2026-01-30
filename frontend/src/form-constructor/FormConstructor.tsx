@@ -4,8 +4,11 @@ import {
   forms,
   identity,
   catalogs,
+  projects,
   type FieldSchema,
   type FieldAccessRuleSchema,
+  type ProjectResponse,
+  type ProjectFieldSchema,
 } from "../api/client";
 import type { CatalogResponse } from "../api/client";
 import { AccessConstructor } from "../access-constructor/AccessConstructor";
@@ -42,6 +45,8 @@ export function FormConstructor() {
   const [fields, setFields] = useState<FieldSchema[]>([]);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
   const [catalogList, setCatalogList] = useState<CatalogResponse[]>([]);
+  const [projectList, setProjectList] = useState<ProjectResponse[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +55,7 @@ export function FormConstructor() {
   useEffect(() => {
     identity.listRoles().then(setRoles).catch(() => setRoles([]));
     catalogs.list().then(setCatalogList).catch(() => setCatalogList([]));
+    projects.list().then(setProjectList).catch(() => setProjectList([]));
   }, []);
 
   useEffect(() => {
@@ -81,6 +87,26 @@ export function FormConstructor() {
     setFields((prev) => [...prev, emptyField()]);
     setSelectedFieldIndex(fields.length);
   };
+
+  const addFieldFromProject = (pf: ProjectFieldSchema) => {
+    const existingKeys = new Set(fields.map((f) => f.name));
+    if (existingKeys.has(pf.key)) return;
+    const newField: FieldSchema = {
+      name: pf.key,
+      label: pf.label,
+      field_type: pf.field_type,
+      required: false,
+      options: (pf.options as { value: string; label: string }[]) ?? null,
+      validations: null,
+      access_rules: [],
+      catalog_id: pf.catalog_id ?? undefined,
+    };
+    setFields((prev) => [...prev, newField]);
+    setSelectedFieldIndex(fields.length);
+  };
+
+  const selectedProject = projectList.find((p) => p.id === selectedProjectId);
+  const projectFields = selectedProject?.fields ?? [];
 
   const removeField = (index: number) => {
     setFields((prev) => prev.filter((_, i) => i !== index));
@@ -142,6 +168,41 @@ export function FormConstructor() {
             rows={2}
           />
         </label>
+      </div>
+
+      <div className={styles.section}>
+        <h2>Поля из проекта</h2>
+        <p className={styles.hint}>
+          Выберите проект — его поля можно добавить в форму одним кликом (ключ поля совпадёт с полем в списке документов).
+        </p>
+        <select
+          value={selectedProjectId}
+          onChange={(e) => setSelectedProjectId(e.target.value)}
+          className={styles.select}
+        >
+          <option value="">— Не выбран —</option>
+          {projectList.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        {projectFields.length > 0 && (
+          <ul className={styles.projectFieldList}>
+            {projectFields.map((pf, i) => (
+              <li key={pf.key || i}>
+                <span>{pf.label || pf.key} ({pf.field_type})</span>
+                <button
+                  type="button"
+                  className={styles.addFromProjectBtn}
+                  onClick={() => addFieldFromProject(pf)}
+                >
+                  Добавить в форму
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className={styles.section}>

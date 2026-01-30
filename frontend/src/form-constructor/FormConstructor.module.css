@@ -31,6 +31,48 @@
   margin-top: 0.25rem;
 }
 
+.hint {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.select {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.projectFieldList {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+}
+
+.projectFieldList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-border);
+  gap: 1rem;
+}
+
+.addFromProjectBtn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.addFromProjectBtn:hover {
+  background: var(--color-accent-hover);
+}
+
 .addBtn {
   margin-bottom: 1rem;
 }

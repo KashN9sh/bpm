@@ -168,28 +168,56 @@ export const catalogs = {
 };
 
 // Projects API (подпроекты документов)
+export interface ProjectFieldSchema {
+  key: string;
+  label: string;
+  field_type: string;
+  catalog_id?: string | null;
+  options?: Record<string, unknown>[] | null;
+}
+
 export interface ProjectResponse {
   id: string;
   name: string;
   description: string;
   sort_order: number;
   list_columns: string[];
+  fields: ProjectFieldSchema[];
 }
 
-export const LIST_COLUMN_OPTIONS: { key: string; label: string }[] = [
+const BASE_LIST_COLUMN_OPTIONS: { key: string; label: string }[] = [
   { key: "process_name", label: "Процесс" },
   { key: "status", label: "Статус" },
 ];
 
+export const LIST_COLUMN_OPTIONS = BASE_LIST_COLUMN_OPTIONS;
+
+export function projectFieldsToColumnOptions(project: ProjectResponse | null): { key: string; label: string }[] {
+  if (!project?.fields?.length) return BASE_LIST_COLUMN_OPTIONS;
+  return [...BASE_LIST_COLUMN_OPTIONS, ...project.fields.map((f) => ({ key: f.key, label: f.label }))];
+}
+
 export const projects = {
   list: () => api<ProjectResponse[]>("/api/projects"),
   get: (id: string) => api<ProjectResponse>(`/api/projects/${id}`),
-  create: (body: { name: string; description?: string; sort_order?: number; list_columns?: string[] }) =>
+  create: (body: {
+    name: string;
+    description?: string;
+    sort_order?: number;
+    list_columns?: string[];
+    fields?: ProjectFieldSchema[];
+  }) =>
     api<ProjectResponse>("/api/projects", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (id: string, body: { name?: string; description?: string; sort_order?: number; list_columns?: string[] }) =>
+  update: (id: string, body: {
+    name?: string;
+    description?: string;
+    sort_order?: number;
+    list_columns?: string[];
+    fields?: ProjectFieldSchema[];
+  }) =>
     api<ProjectResponse>(`/api/projects/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -289,6 +317,7 @@ export interface DocumentListItem {
   process_name: string;
   status: string;
   current_node_id: string | null;
+  context?: Record<string, unknown>;
 }
 
 export const runtime = {

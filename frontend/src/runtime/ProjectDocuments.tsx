@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { runtime, projects, LIST_COLUMN_OPTIONS, type DocumentListItem, type ProjectResponse } from "../api/client";
+import {
+  runtime,
+  projects,
+  projectFieldsToColumnOptions,
+  type DocumentListItem,
+  type ProjectResponse,
+} from "../api/client";
 import styles from "./DocumentList.module.css";
 
 const statusLabel: Record<string, string> = {
@@ -10,14 +16,17 @@ const statusLabel: Record<string, string> = {
   cancelled: "Отменён",
 };
 
-const columnLabelByKey: Record<string, string> = Object.fromEntries(
-  LIST_COLUMN_OPTIONS.map((o) => [o.key, o.label])
-);
+function getColumnLabelByKey(project: ProjectResponse | null): Record<string, string> {
+  const options = projectFieldsToColumnOptions(project);
+  return Object.fromEntries(options.map((o) => [o.key, o.label]));
+}
 
 function getDocumentCellValue(d: DocumentListItem, key: string): string {
   if (key === "process_name") return d.process_name || "Без названия";
   if (key === "status") return statusLabel[d.status] ?? d.status;
-  return (d as Record<string, unknown>)[key] != null ? String((d as Record<string, unknown>)[key]) : "";
+  const ctx = d.context ?? {};
+  const val = ctx[key];
+  return val != null ? String(val) : "";
 }
 
 export function ProjectDocuments() {
@@ -42,6 +51,7 @@ export function ProjectDocuments() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
+  const columnLabelByKey = getColumnLabelByKey(project);
   const columns = project?.list_columns?.length
     ? project.list_columns.filter((k) => columnLabelByKey[k])
     : ["process_name", "status"];

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.identity.infrastructure.models import Base, gen_uuid
 
 _DEFAULT_LIST_COLUMNS = '["process_name", "status"]'
+_DEFAULT_FIELDS_SCHEMA = "[]"
 
 
 class ProjectModel(Base):
@@ -14,3 +15,4 @@ class ProjectModel(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     list_columns: Mapped[str] = mapped_column(Text, nullable=False, default=_DEFAULT_LIST_COLUMNS)
+    fields_schema: Mapped[str] = mapped_column(Text, nullable=False, default=_DEFAULT_FIELDS_SCHEMA)

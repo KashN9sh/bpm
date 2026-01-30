@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.projects.domain import Project
+from src.projects.domain import Project, ProjectField
 from src.projects.infrastructure.models import ProjectModel
 
 
@@ -18,6 +18,42 @@ def _parse_list_columns(raw: str | None) -> list[str]:
         return ["process_name", "status"]
 
 
+def _parse_fields_schema(raw: str | None) -> list[ProjectField]:
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list):
+            return []
+        out = []
+        for item in parsed:
+            if isinstance(item, dict) and "key" in item and "label" in item:
+                out.append(ProjectField(
+                    key=str(item["key"]),
+                    label=str(item.get("label", item["key"])),
+                    field_type=str(item.get("field_type", "text")),
+                    catalog_id=item.get("catalog_id") or None,
+                    options=item.get("options") if isinstance(item.get("options"), list) else None,
+                ))
+        return out
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def _serialize_fields(fields: list[ProjectField]) -> str:
+    arr = [
+        {
+            "key": f.key,
+            "label": f.label,
+            "field_type": f.field_type,
+            "catalog_id": f.catalog_id,
+            "options": f.options,
+        }
+        for f in fields
+    ]
+    return json.dumps(arr)
+
+
 class ProjectRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
@@ -28,6 +64,7 @@ class ProjectRepository:
         description: str = "",
         sort_order: int = 0,
         list_columns: list[str] | None = None,
+        fields: list[ProjectField] | None = None,
     ) -> Project:
         cols = list_columns if list_columns is not None else ["process_name", "status"]
         model = ProjectModel(
@@ -35,6 +72,7 @@ class ProjectRepository:
             description=description,
             sort_order=sort_order,
             list_columns=json.dumps(cols),
+            fields_schema=_serialize_fields(fields or []),
         )
         self._session.add(model)
         await self._session.flush()
@@ -45,6 +83,7 @@ class ProjectRepository:
             description=model.description or "",
             sort_order=model.sort_order or 0,
             list_columns=_parse_list_columns(model.list_columns),
+            fields=_parse_fields_schema(getattr(model, "fields_schema", None)),
         )
 
     async def get_by_id(self, project_id: UUID) -> Project | None:
@@ -60,6 +99,7 @@ class ProjectRepository:
             description=row.description or "",
             sort_order=row.sort_order or 0,
             list_columns=_parse_list_columns(getattr(row, "list_columns", None)),
+            fields=_parse_fields_schema(getattr(row, "fields_schema", None)),
         )
 
     async def list_all(self) -> list[Project]:
@@ -74,6 +114,7 @@ class ProjectRepository:
                 description=r.description or "",
                 sort_order=r.sort_order or 0,
                 list_columns=_parse_list_columns(getattr(r, "list_columns", None)),
+                fields=_parse_fields_schema(getattr(r, "fields_schema", None)),
             )
             for r in rows
         ]
@@ -85,6 +126,7 @@ class ProjectRepository:
         description: str | None = None,
         sort_order: int | None = None,
         list_columns: list[str] | None = None,
+        fields: list[ProjectField] | None = None,
     ) -> Project | None:
         result = await self._session.execute(
             select(ProjectModel).where(ProjectModel.id == str(project_id))
@@ -100,6 +142,8 @@ class ProjectRepository:
             row.sort_order = sort_order
         if list_columns is not None:
             row.list_columns = json.dumps(list_columns)
+        if fields is not None:
+            row.fields_schema = _serialize_fields(fields)
         await self._session.flush()
         await self._session.refresh(row)
         return Project(
@@ -108,6 +152,7 @@ class ProjectRepository:
             description=row.description or "",
             sort_order=row.sort_order or 0,
             list_columns=_parse_list_columns(getattr(row, "list_columns", None)),
+            fields=_parse_fields_schema(getattr(row, "fields_schema", None)),
         )
 
     async def delete(self, project_id: UUID) -> bool:

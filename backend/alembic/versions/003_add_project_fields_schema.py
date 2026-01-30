@@ -1,7 +1,7 @@
-"""add list_columns to projects
+"""add fields_schema to projects
 
-Revision ID: 002
-Revises: 001
+Revision ID: 003
+Revises: 002
 Create Date: 2026-01-30
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 
-revision: str = "002"
-down_revision: Union[str, Sequence[str], None] = "001"
+revision: str = "003"
+down_revision: Union[str, Sequence[str], None] = "002"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -22,12 +22,12 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = inspect(conn)
     cols = [c["name"] for c in inspector.get_columns("projects")]
-    if "list_columns" not in cols:
+    if "fields_schema" not in cols:
         op.add_column(
             "projects",
-            sa.Column("list_columns", sa.Text(), nullable=False, server_default='["process_name", "status"]'),
+            sa.Column("fields_schema", sa.Text(), nullable=False, server_default="[]"),
         )
 
 
 def downgrade() -> None:
-    op.drop_column("projects", "list_columns")
+    op.drop_column("projects", "fields_schema")

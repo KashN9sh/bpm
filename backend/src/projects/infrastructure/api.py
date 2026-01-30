@@ -6,9 +6,18 @@ from pydantic import BaseModel
 from src.database import get_session
 from src.identity.domain import User
 from src.identity.infrastructure.deps import get_current_user_required, require_admin
+from src.projects.domain import ProjectField
 from src.projects.infrastructure.repository import ProjectRepository
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+
+class ProjectFieldSchema(BaseModel):
+    key: str
+    label: str
+    field_type: str = "text"
+    catalog_id: str | None = None
+    options: list[dict] | None = None
 
 
 class ProjectCreate(BaseModel):
@@ -16,6 +25,7 @@ class ProjectCreate(BaseModel):
     description: str = ""
     sort_order: int = 0
     list_columns: list[str] = ["process_name", "status"]
+    fields: list[ProjectFieldSchema] = []
 
 
 class ProjectUpdate(BaseModel):
@@ -23,6 +33,7 @@ class ProjectUpdate(BaseModel):
     description: str | None = None
     sort_order: int | None = None
     list_columns: list[str] | None = None
+    fields: list[ProjectFieldSchema] | None = None
 
 
 class ProjectResponse(BaseModel):
@@ -31,20 +42,46 @@ class ProjectResponse(BaseModel):
     description: str
     sort_order: int
     list_columns: list[str]
+    fields: list[ProjectFieldSchema] = []
 
 
 def get_project_repo(session=Depends(get_session)) -> ProjectRepository:
     return ProjectRepository(session)
 
 
+def _field_to_schema(f) -> ProjectFieldSchema:
+    return ProjectFieldSchema(
+        key=f.key,
+        label=f.label,
+        field_type=getattr(f, "field_type", "text"),
+        catalog_id=getattr(f, "catalog_id", None),
+        options=getattr(f, "options", None),
+    )
+
+
 def _to_response(p) -> ProjectResponse:
+    fields = getattr(p, "fields", None) or []
     return ProjectResponse(
         id=str(p.id),
         name=p.name,
         description=p.description,
         sort_order=p.sort_order,
         list_columns=getattr(p, "list_columns", None) or ["process_name", "status"],
+        fields=[_field_to_schema(f) for f in fields],
     )
+
+
+def _body_fields_to_domain(fields: list) -> list[ProjectField]:
+    return [
+        ProjectField(
+            key=f.key,
+            label=f.label,
+            field_type=f.field_type or "text",
+            catalog_id=f.catalog_id,
+            options=f.options,
+        )
+        for f in fields
+    ]
 
 
 @router.post("", response_model=ProjectResponse)
@@ -58,6 +95,7 @@ async def create_project(
         description=body.description,
         sort_order=body.sort_order,
         list_columns=body.list_columns,
+        fields=_body_fields_to_domain(body.fields or []),
     )
     return _to_response(project)
 
@@ -96,6 +134,7 @@ async def update_project(
         description=body.description,
         sort_order=body.sort_order,
         list_columns=body.list_columns,
+        fields=_body_fields_to_domain(body.fields) if body.fields is not None else None,
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

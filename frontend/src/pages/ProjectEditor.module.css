@@ -62,6 +62,79 @@
   margin-top: 0;
 }
 
+.addBtn {
+  margin-bottom: 1rem;
+  background-color: var(--color-accent);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.addBtn:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.fieldList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.fieldList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.fieldList li.selected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+}
+
+.fieldName {
+  flex: 1;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0 0.25rem;
+}
+
+.removeBtn:hover {
+  color: var(--color-error);
+}
+
+.fieldForm {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.fieldForm label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.fieldForm input,
+.fieldForm select {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .actions {
   display: flex;
   gap: 1rem;

@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { projects, LIST_COLUMN_OPTIONS } from "../api/client";
+import {
+  projects,
+  catalogs,
+  projectFieldsToColumnOptions,
+  type ProjectFieldSchema,
+  type ProjectResponse,
+  type CatalogResponse,
+} from "../api/client";
 import styles from "./ProjectEditor.module.css";
+
+const PROJECT_FIELD_TYPES = ["text", "number", "date", "textarea", "select", "multiselect", "boolean"] as const;
+
+function emptyProjectField(): ProjectFieldSchema {
+  return { key: "", label: "", field_type: "text", catalog_id: null, options: null };
+}
 
 export function ProjectEditor() {
   const { projectId } = useParams<{ projectId?: string }>();
@@ -12,29 +25,60 @@ export function ProjectEditor() {
   const [description, setDescription] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
   const [listColumns, setListColumns] = useState<string[]>(["process_name", "status"]);
+  const [fields, setFields] = useState<ProjectFieldSchema[]>([]);
+  const [selectedFieldIndex, setSelectedFieldIndex] = useState<number | null>(null);
+  const [catalogList, setCatalogList] = useState<CatalogResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    catalogs.list().then(setCatalogList).catch(() => setCatalogList([]));
+  }, []);
 
   useEffect(() => {
     if (isNew || !projectId) return;
     setLoading(true);
     projects
       .get(projectId)
-      .then((p) => {
+      .then((p: ProjectResponse) => {
         setName(p.name);
         setDescription(p.description);
         setSortOrder(p.sort_order);
         setListColumns(p.list_columns?.length ? p.list_columns : ["process_name", "status"]);
+        setFields(p.fields?.length ? p.fields : []);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [projectId, isNew]);
 
+  const listColumnOptions = projectFieldsToColumnOptions({
+    list_columns: listColumns,
+    fields,
+  } as ProjectResponse);
+
   const toggleListColumn = (key: string) => {
     setListColumns((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
+  };
+
+  const updateProjectField = (index: number, patch: Partial<ProjectFieldSchema>) => {
+    setFields((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, ...patch } : f))
+    );
+  };
+
+  const addProjectField = () => {
+    setFields((prev) => [...prev, emptyProjectField()]);
+    setSelectedFieldIndex(fields.length);
+  };
+
+  const removeProjectField = (index: number) => {
+    const key = fields[index]?.key;
+    setFields((prev) => prev.filter((_, i) => i !== index));
+    if (key) setListColumns((prev) => prev.filter((k) => k !== key));
+    setSelectedFieldIndex(null);
   };
 
   const save = async (e: React.FormEvent) => {
@@ -44,6 +88,7 @@ export function ProjectEditor() {
       description: description.trim(),
       sort_order: sortOrder,
       list_columns: listColumns.length ? listColumns : ["process_name", "status"],
+      fields: fields.filter((f) => f.key.trim()),
     };
     setSaving(true);
     setError(null);
@@ -98,11 +143,113 @@ export function ProjectEditor() {
             min={0}
           />
         </label>
+
+        <fieldset className={styles.fieldset}>
+          <legend>Конструктор полей проекта</legend>
+          <p className={styles.fieldsetHint}>
+            Добавьте поля — они будут доступны в конструкторе форм и в списке документов.
+          </p>
+          <button type="button" onClick={addProjectField} className={styles.addBtn}>
+            Добавить поле
+          </button>
+          <ul className={styles.fieldList}>
+            {fields.map((f, i) => (
+              <li
+                key={i}
+                className={selectedFieldIndex === i ? styles.selected : ""}
+                onClick={() => setSelectedFieldIndex(i)}
+              >
+                <span className={styles.fieldName}>
+                  {f.key || `Поле ${i + 1}`} ({f.field_type})
+                </span>
+                <button
+                  type="button"
+                  className={styles.removeBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeProjectField(i);
+                  }}
+                  aria-label="Удалить"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+          {selectedFieldIndex != null && fields[selectedFieldIndex] && (
+            <div className={styles.fieldForm}>
+              <label>
+                Ключ (key)
+                <input
+                  value={fields[selectedFieldIndex].key}
+                  onChange={(e) =>
+                    updateProjectField(selectedFieldIndex, {
+                      key: e.target.value.replace(/\s/g, "_"),
+                    })
+                  }
+                  placeholder="field_name"
+                />
+              </label>
+              <label>
+                Подпись
+                <input
+                  value={fields[selectedFieldIndex].label}
+                  onChange={(e) =>
+                    updateProjectField(selectedFieldIndex, { label: e.target.value })
+                  }
+                  placeholder="Подпись"
+                />
+              </label>
+              <label>
+                Тип
+                <select
+                  value={fields[selectedFieldIndex].field_type}
+                  onChange={(e) =>
+                    updateProjectField(selectedFieldIndex, {
+                      field_type: e.target.value,
+                    })
+                  }
+                >
+                  {PROJECT_FIELD_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {(fields[selectedFieldIndex].field_type === "select" ||
+                fields[selectedFieldIndex].field_type === "multiselect") && (
+                <label>
+                  Справочник (варианты выбора)
+                  <select
+                    value={fields[selectedFieldIndex].catalog_id ?? ""}
+                    onChange={(e) =>
+                      updateProjectField(selectedFieldIndex, {
+                        catalog_id: e.target.value || null,
+                        options: e.target.value ? null : fields[selectedFieldIndex].options,
+                      })
+                    }
+                  >
+                    <option value="">— Без справочника (options вручную) —</option>
+                    {catalogList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
+        </fieldset>
+
         <fieldset className={styles.fieldset}>
           <legend>Поля в списке документов</legend>
-          <p className={styles.fieldsetHint}>Выберите колонки, которые будут отображаться в списке документов проекта.</p>
+          <p className={styles.fieldsetHint}>
+            Выберите колонки, которые будут отображаться в списке документов проекта.
+          </p>
           <div className={styles.checkboxGroup}>
-            {LIST_COLUMN_OPTIONS.map((opt) => (
+            {listColumnOptions.map((opt) => (
               <label key={opt.key} className={styles.checkboxLabel}>
                 <input
                   type="checkbox"

@@ -47,6 +47,7 @@ class DocumentListItem(BaseModel):
     process_name: str
     status: str
     current_node_id: str | None
+    context: dict = {}
 
 
 def get_instance_repo(session=Depends(get_session)) -> ProcessInstanceRepository:

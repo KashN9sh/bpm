@@ -46,6 +46,7 @@ class RuntimeService:
                 "process_project_id": str(process.project_id) if process and process.project_id else None,
                 "status": inst.status.value,
                 "current_node_id": inst.current_node_id,
+                "context": inst.context or {},
             })
         return out
 
