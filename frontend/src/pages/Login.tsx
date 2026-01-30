@@ -34,33 +34,35 @@ export function Login() {
 
   return (
     <div className={styles.wrap}>
-      <h1>Вход</h1>
-      {error && <div className={styles.error}>{error}</div>}
-      <form onSubmit={submit} className={styles.form}>
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-        </label>
-        <label>
-          Пароль
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </label>
-        <button type="submit" disabled={loading}>
-          {loading ? "Вход…" : "Войти"}
-        </button>
-      </form>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Вход</h1>
+        {error && <div className={styles.error}>{error}</div>}
+        <form onSubmit={submit} className={styles.form}>
+          <label>
+            <span>Email</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </label>
+          <label>
+            <span>Пароль</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </label>
+          <button type="submit" disabled={loading}>
+            {loading ? "Вход…" : "Войти"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

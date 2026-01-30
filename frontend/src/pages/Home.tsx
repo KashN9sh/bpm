@@ -2,28 +2,49 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import styles from "./Home.module.css";
 
+const sections = [
+  { to: "/documents", title: "Документы", desc: "Документ движется по процессу, формы по шагам.", primary: true },
+  { to: "/roles", title: "Роли", desc: "Создание ролей для доступа к полям.", admin: true },
+  { to: "/users", title: "Пользователи", desc: "Пользователи и назначение ролей.", admin: true },
+  { to: "/catalogs", title: "Справочники", desc: "Варианты для полей «Выбор» и «Множественный выбор».", admin: true },
+  { to: "/forms", title: "Формы", desc: "Состав полей и правила доступа.", admin: true },
+  { to: "/processes", title: "Процессы", desc: "Диаграмма шагов и переходов.", admin: true },
+];
+
 export function Home() {
   const { user, isAdmin } = useAuth();
 
+  const visibleSections = sections.filter((s) => !s.admin || isAdmin);
+
   return (
     <div className={styles.wrap}>
-      <h1>BPM</h1>
-      <p>Конструктор процессов и форм.</p>
+      <section className={styles.hero}>
+        <h1>BPM</h1>
+        <p className={styles.subtitle}>
+          Конструктор процессов и форм для дизайнеров, редакторов и разработчиков.
+        </p>
+      </section>
+
       {user ? (
-        <ul>
-          {isAdmin && (
-            <>
-              <li><Link to="/roles">Роли</Link> — создание ролей для доступа к полям</li>
-              <li><Link to="/users">Пользователи</Link> — создание пользователей и назначение ролей</li>
-              <li><Link to="/catalogs">Справочники</Link> — варианты для полей «Выбор» и «Множественный выбор»</li>
-              <li><Link to="/forms">Конструктор форм</Link> — состав полей и правила доступа</li>
-              <li><Link to="/processes">Редактор процессов</Link> — диаграмма шагов и переходов</li>
-            </>
-          )}
-          <li><Link to="/documents">Документы</Link> — документ движется по процессу (формы по шагам)</li>
-        </ul>
+        <>
+          <h2 className={styles.sectionTitle}>Разделы</h2>
+          <div className={styles.grid}>
+            {visibleSections.map((s) => (
+              <Link
+                key={s.to}
+                to={s.to}
+                className={`${styles.card} ${s.primary ? styles.cardWithStrip : ""}`}
+              >
+                <h3 className={styles.cardTitle}>{s.title}</h3>
+                <p className={styles.cardDesc}>{s.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </>
       ) : (
-        <p><Link to="/login">Войдите</Link>, чтобы работать с документами.</p>
+        <div className={styles.guestHint}>
+          <Link to="/login">Войдите</Link>, чтобы работать с документами и разделами.
+        </div>
       )}
     </div>
   );

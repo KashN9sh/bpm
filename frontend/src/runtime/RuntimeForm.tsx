@@ -62,10 +62,12 @@ export function RuntimeForm() {
   if (state === "completed") {
     return (
       <div className={styles.wrap}>
-        <h1>Процесс завершён</h1>
-        <button type="button" onClick={() => navigate("/documents")}>
-          К списку документов
-        </button>
+        <div className={styles.completedCard}>
+          <h1>Процесс завершён</h1>
+          <button type="button" onClick={() => navigate("/documents")}>
+            К списку документов
+          </button>
+        </div>
       </div>
     );
   }

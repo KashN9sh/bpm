@@ -1,12 +1,11 @@
 .wrap {
-  padding: 1.5rem;
   max-width: 560px;
 }
 
 .intro {
-  color: #555;
+  color: var(--color-text-muted);
   margin-bottom: 1rem;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
 }
 
 .form {
@@ -16,25 +15,38 @@
 .form label {
   display: block;
   margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.form label > span:first-child {
+  display: block;
+  margin-bottom: 0.35rem;
 }
 
 .form input[type="email"],
 .form input[type="password"] {
   width: 100%;
-  padding: 0.5rem;
-  margin-top: 0.25rem;
 }
 
 .form button {
   margin-top: 0.5rem;
+  background-color: var(--color-accent);
+  color: #fff;
+  border: none;
   padding: 0.5rem 1rem;
+}
+
+.form button:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
 }
 
 .roles {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.5rem;
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
 }
 
 .roleCb {
@@ -42,7 +54,8 @@
   align-items: center;
   gap: 0.35rem;
   cursor: pointer;
-  font-weight: normal;
+  font-weight: 400;
+  font-size: 0.9375rem;
 }
 
 .roleCb input {
@@ -51,22 +64,36 @@
 }
 
 .error {
-  color: #c00;
+  background-color: #fef2f2;
+  color: var(--color-error);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
   margin-bottom: 1rem;
+  font-size: 0.875rem;
 }
 
 .list {
   list-style: none;
   padding: 0;
   margin: 0;
+  background-color: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .list li {
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #eee;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9375rem;
+}
+
+.list li:last-child {
+  border-bottom: none;
 }
 
 .empty {
-  color: #666;
+  color: var(--color-text-muted);
   margin-top: 1rem;
+  font-size: 0.9375rem;
 }

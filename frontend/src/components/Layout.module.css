@@ -1,38 +1,130 @@
+/* Сайдбар: ровная колонка, лого — нав — футер */
 .root {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
 }
 
-.nav {
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid #ddd;
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background-color: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-border);
   display: flex;
-  gap: 1.5rem;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 20;
 }
 
-.nav a {
-  color: var(--link, #0a7ea4);
+.logo {
+  flex-shrink: 0;
+  padding: 1.25rem 1.5rem;
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-sidebar-border);
+  line-height: 1.2;
+}
+
+.logo:hover {
+  color: var(--color-accent);
   text-decoration: none;
 }
 
-.nav a:hover {
-  text-decoration: underline;
+.nav {
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 0.75rem 0;
+  overflow-y: auto;
+}
+
+.navLink,
+.navLinkActive {
+  display: block;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-sidebar-text);
+  text-decoration: none;
+  transition: color 0.15s, background-color 0.15s;
+  border-left: 3px solid transparent;
+}
+
+.navLink:hover {
+  color: var(--color-sidebar-text-active);
+  background-color: rgba(0, 0, 0, 0.04);
+  text-decoration: none;
+}
+
+.navLinkActive {
+  color: var(--color-accent);
+  background-color: var(--color-accent-tint);
+  border-left-color: var(--color-accent);
+}
+
+.navLinkActive:hover {
+  color: var(--color-accent-hover);
+  background-color: var(--color-accent-tint);
+}
+
+.sidebarFooter {
+  flex-shrink: 0;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-sidebar-border);
+}
+
+.userEmail {
+  font-size: 0.8125rem;
+  color: var(--color-sidebar-text);
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .logoutBtn {
   background: none;
   border: none;
   padding: 0;
-  font: inherit;
-  color: var(--link, #0a7ea4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-sidebar-text);
   cursor: pointer;
+  text-align: left;
 }
 
 .logoutBtn:hover {
-  text-decoration: underline;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.ctaLink {
+  display: block;
+  text-align: center;
+  background-color: var(--color-accent);
+  color: #fff !important;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.ctaLink:hover {
+  background-color: var(--color-accent-hover);
+  color: #fff !important;
+  text-decoration: none;
 }
 
 .main {
   flex: 1;
+  min-width: 0;
+  margin-left: 260px;
+  padding: 1.5rem 2rem;
+  min-height: 100vh;
+  max-width: 1200px;
 }
