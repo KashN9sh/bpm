@@ -4,7 +4,7 @@ BPM-система с DDD: пользователь конструирует б�
 
 ## Стек
 
-- **Backend:** Python 3.11+, FastAPI, SQLAlchemy (async), PostgreSQL / SQLite
+- **Backend:** Python 3.11+, FastAPI, SQLAlchemy (async), PostgreSQL
 - **Frontend:** React 18+, TypeScript, Vite, React Flow, React Router
 - **Архитектура:** DDD (bounded contexts: Identity, Form Builder, Process Design, Runtime, Rules)
 
@@ -33,6 +33,20 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 PostgreSQL: localhost:5432 (логин/пароль/БД: `bpm`/`bpm`/`bpm`). Таблицы создаются при первом запросе к API.
 
+**Первый админ в Docker** — когда контейнеры уже запущены, в другом терминале из корня проекта:
+
+```bash
+# с dev-конфигом:
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec backend python -m src.cli db-init
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec backend python -m src.cli user create --email admin@bpm.local --password changeme --admin
+
+# или без dev (обычный compose):
+docker compose exec backend python -m src.cli db-init
+docker compose exec backend python -m src.cli user create --email admin@bpm.local --password changeme --admin
+```
+
+После этого войти: `admin@bpm.local` / `changeme`.
+
 ### Локально
 
 **Backend**
@@ -40,12 +54,31 @@ PostgreSQL: localhost:5432 (логин/пароль/БД: `bpm`/`bpm`/`bpm`). Т
 ```bash
 cd backend
 pip install -r requirements.txt
-# Опционально: .env с DATABASE_URL, SECRET_KEY
+# В .env обязательно DATABASE_URL (postgresql+asyncpg://...), SECRET_KEY
 export PYTHONPATH=src
 uvicorn main:app --reload --app-dir src
 ```
 
-По умолчанию БД: `sqlite+aiosqlite:///./bpm.db`.
+**CLI** (из каталога `backend`, после `pip install -e .` или `pip install -r requirements.txt`):
+
+```bash
+# Инициализация БД и создание роли admin
+python -m src.cli db-init
+
+# Первый админ (пароль можно ввести по запросу)
+python -m src.cli user create --email admin@example.com --admin
+# или с паролем в аргументе:
+python -m src.cli user create --email admin@example.com --password secret --admin
+
+# Список пользователей и ролей
+python -m src.cli user list
+python -m src.cli role list
+
+# Создать роль
+python -m src.cli role create manager
+```
+
+Через entry point (после `pip install -e .`): `bpm db-init`, `bpm user create -e admin@test.local -a`, `bpm user list`, `bpm role list`, `bpm role create manager`.
 
 **Frontend**
 
@@ -77,6 +110,7 @@ backend/src/
   config.py
   database.py
   main.py
+  cli.py              # CLI: db-init, user create/list, role create/list
 ```
 
 Каждый контекст: `domain/`, `application/`, `infrastructure/` (API, репозитории, модели).

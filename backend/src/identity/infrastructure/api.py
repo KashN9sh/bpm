@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/identity", tags=["identity"])
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str  # str, чтобы принимать admin@bpm.local и др.; EmailStr отклоняет .local
     password: str
 
 
