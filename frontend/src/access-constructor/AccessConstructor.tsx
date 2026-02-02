@@ -93,9 +93,14 @@ export function AccessConstructor({
             <span>{PERMISSIONS.find((p) => p.value === r.permission)?.label ?? r.permission}</span>
             <button
               type="button"
-              onClick={() => removeRule(i)}
               className={styles.removeBtn}
-              aria-label="Удалить"
+              aria-label="Удалить правило"
+              title="Удалить правило"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeRule(i);
+              }}
             >
               ×
             </button>

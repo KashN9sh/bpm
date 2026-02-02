@@ -51,6 +51,7 @@ export function FormConstructor() {
   const [canvasDragOver, setCanvasDragOver] = useState(false);
   const [draggingBlockIndex, setDraggingBlockIndex] = useState<number | null>(null);
   const [resizingBlockIndex, setResizingBlockIndex] = useState<number | null>(null);
+  const [previewMode, setPreviewMode] = useState(true);
   const resizeStartX = useRef(0);
   const resizeStartWidth = useRef(12);
   const canvasFieldsRef = useRef<HTMLDivElement>(null);
@@ -292,6 +293,13 @@ export function FormConstructor() {
           placeholder="Описание"
         />
         <div className={styles.topBarActions}>
+          <button
+            type="button"
+            className={previewMode ? styles.backBtn : styles.previewBtnActive}
+            onClick={() => setPreviewMode(!previewMode)}
+          >
+            {previewMode ? "Конструктор" : "Предпросмотр"}
+          </button>
           <button type="button" className={styles.saveBtn} onClick={save} disabled={saving}>
             {saving ? "Сохранение…" : "Сохранить"}
           </button>
@@ -303,6 +311,38 @@ export function FormConstructor() {
 
       {error && <div className={styles.error}>{error}</div>}
 
+      {previewMode ? (
+        <div className={styles.previewFull}>
+          <h1 className={styles.previewTitle}>{name || "Без названия"}</h1>
+          {description && <p className={styles.previewDesc}>{description}</p>}
+          <div className={styles.previewForm}>
+            {fields.map((f, i) => (
+              <label key={i} className={styles.previewField} style={{ gridColumn: `span ${f.width ?? 12}` }}>
+                <span>{f.label || f.name}</span>
+                {f.field_type === "textarea" ? (
+                  <textarea readOnly rows={3} placeholder="" />
+                ) : f.field_type === "boolean" ? (
+                  <input type="checkbox" disabled />
+                ) : f.field_type === "number" ? (
+                  <input type="number" readOnly placeholder="" />
+                ) : f.field_type === "select" || f.field_type === "multiselect" ? (
+                  <select disabled>
+                    <option value="">— Выберите —</option>
+                    {(f.options ?? []).map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label ?? opt.value}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input type={f.field_type === "date" ? "date" : "text"} readOnly placeholder="" />
+                )}
+              </label>
+            ))}
+            <div className={styles.previewActions}>
+              <span className={styles.previewActionsPlaceholder}>Далее</span>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className={styles.main}>
         <aside className={styles.palette}>
           <div className={styles.paletteTitle}>Поля из проекта</div>
@@ -465,6 +505,7 @@ export function FormConstructor() {
           </div>
         </aside>
       </div>
+      )}
     </div>
   );
 }
