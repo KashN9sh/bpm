@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   forms,
@@ -12,6 +12,20 @@ import {
 import type { CatalogResponse, ProjectResponse } from "../api/client";
 import { AccessConstructor } from "../access-constructor/AccessConstructor";
 import styles from "./FormConstructor.module.css";
+
+const FIELD_TYPE_LABELS: Record<string, string> = {
+  text: "Текст",
+  number: "Число",
+  textarea: "Текст (многострочный)",
+  select: "Выбор",
+  multiselect: "Множественный выбор",
+  date: "Дата",
+  checkbox: "Флажок",
+};
+
+function fieldTypeLabel(ft: string): string {
+  return FIELD_TYPE_LABELS[ft] ?? ft;
+}
 
 export function FormConstructor() {
   const { formId } = useParams<{ formId: string }>();
@@ -33,6 +47,13 @@ export function FormConstructor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFieldIndex, setSelectedFieldIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [canvasDragOver, setCanvasDragOver] = useState(false);
+  const [draggingBlockIndex, setDraggingBlockIndex] = useState<number | null>(null);
+  const [resizingBlockIndex, setResizingBlockIndex] = useState<number | null>(null);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(12);
+  const canvasFieldsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     identity.listRoles().then(setRoles).catch(() => setRoles([]));
@@ -47,7 +68,7 @@ export function FormConstructor() {
   useEffect(() => {
     if (isNew || !formId || formId === "undefined") {
       if (!isNew && (!formId || formId === "undefined")) {
-        navigate("/forms", { replace: true });
+        navigate("/projects", { replace: true });
       }
       return;
     }
@@ -63,13 +84,13 @@ export function FormConstructor() {
       .finally(() => setLoading(false));
   }, [formId, isNew]);
 
-  const updateField = (index: number, patch: Partial<FieldSchema>) => {
+  const updateField = useCallback((index: number, patch: Partial<FieldSchema>) => {
     setFields((prev) =>
       prev.map((f, i) => (i === index ? { ...f, ...patch } : f))
     );
-  };
+  }, []);
 
-  const addFieldFromProject = (pf: ProjectFieldSchema) => {
+  const addFieldFromProject = useCallback((pf: ProjectFieldSchema) => {
     const existingKeys = new Set(fields.map((f) => f.name));
     if (existingKeys.has(pf.key)) return;
     const newField: FieldSchema = {
@@ -81,23 +102,46 @@ export function FormConstructor() {
       validations: null,
       access_rules: [],
       catalog_id: pf.catalog_id ?? undefined,
+      width: 12,
     };
     setFields((prev) => [...prev, newField]);
     setSelectedFieldIndex(fields.length);
-  };
+  }, [fields]);
 
-  const removeField = (index: number) => {
+  const removeField = useCallback((index: number) => {
     setFields((prev) => prev.filter((_, i) => i !== index));
-    setSelectedFieldIndex(null);
-  };
+    setSelectedFieldIndex((prev) => {
+      if (prev == null) return null;
+      if (prev === index) return null;
+      if (prev > index) return prev - 1;
+      return prev;
+    });
+  }, []);
+
+  const moveField = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setFields((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, removed);
+      return next;
+    });
+    setSelectedFieldIndex((prev) => {
+      if (prev == null) return null;
+      if (prev === fromIndex) return toIndex;
+      if (fromIndex < prev && toIndex >= prev) return prev - 1;
+      if (fromIndex > prev && toIndex <= prev) return prev + 1;
+      return prev;
+    });
+  }, []);
 
   const projectFields = project?.fields ?? [];
   const addedFieldKeys = new Set(fields.map((f) => f.name));
   const projectFieldsAvailable = projectFields.filter((pf) => !addedFieldKeys.has(pf.key));
 
-  const updateAccessRules = (index: number, rules: FieldAccessRuleSchema[]) => {
+  const updateAccessRules = useCallback((index: number, rules: FieldAccessRuleSchema[]) => {
     updateField(index, { access_rules: rules });
-  };
+  }, [updateField]);
 
   const save = async () => {
     setSaving(true);
@@ -126,140 +170,300 @@ export function FormConstructor() {
     }
   };
 
+  const handlePaletteDragStart = (e: React.DragEvent, pf: ProjectFieldSchema) => {
+    e.dataTransfer.setData("application/x-project-field", JSON.stringify(pf));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setCanvasDragOver(false);
+    const raw = e.dataTransfer.getData("application/x-project-field");
+    if (!raw) return;
+    try {
+      const pf = JSON.parse(raw) as ProjectFieldSchema;
+      addFieldFromProject(pf);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCanvasDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes("application/x-project-field")) {
+      setCanvasDragOver(true);
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleCanvasDragLeave = () => {
+    setCanvasDragOver(false);
+  };
+
+  const handleBlockDragStart = (e: React.DragEvent, index: number) => {
+    setDraggingBlockIndex(index);
+    e.dataTransfer.setData("application/x-form-field-index", String(index));
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", ""); // for Firefox
+  };
+
+  const handleBlockDragOver = (e: React.DragEvent, index: number) => {
+    if (!e.dataTransfer.types.includes("application/x-form-field-index")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIndex(index);
+  };
+
+  const handleBlockDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleBlockDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    const raw = e.dataTransfer.getData("application/x-form-field-index");
+    if (raw === "") return;
+    const dragIndex = parseInt(raw, 10);
+    if (Number.isNaN(dragIndex)) return;
+    const toIndex = dragIndex < dropIndex ? dropIndex - 1 : dropIndex;
+    if (dragIndex === toIndex) return;
+    moveField(dragIndex, toIndex);
+  };
+
+  const handleBlockDragEnd = () => {
+    setDragOverIndex(null);
+    setDraggingBlockIndex(null);
+  };
+
+  const handleResizeStart = (e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingBlockIndex(index);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = fields[index]?.width ?? 12;
+  };
+
+  useEffect(() => {
+    if (resizingBlockIndex == null) return;
+    const container = canvasFieldsRef.current;
+    const startX = resizeStartX.current;
+    const startW = resizeStartWidth.current;
+    const onMove = (e: MouseEvent) => {
+      if (container == null) return;
+      const rect = container.getBoundingClientRect();
+      const colWidth = rect.width / 12;
+      const deltaX = e.clientX - startX;
+      const deltaCols = Math.round(deltaX / colWidth);
+      const newWidth = Math.min(12, Math.max(1, startW + deltaCols));
+      setFields((prev) =>
+        prev.map((f, idx) =>
+          idx === resizingBlockIndex ? { ...f, width: newWidth } : f
+        )
+      );
+    };
+    const onUp = () => setResizingBlockIndex(null);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [resizingBlockIndex]);
+
   if (loading) return <div className={styles.wrap}>Загрузка…</div>;
 
   const selectedField = selectedFieldIndex != null ? fields[selectedFieldIndex] : null;
 
   return (
     <div className={styles.wrap}>
-      <h1>{isNew ? "Новая форма" : "Редактирование формы"}</h1>
+      <div className={styles.topBar}>
+        <input
+          type="text"
+          className={styles.formName}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Название формы"
+        />
+        <input
+          type="text"
+          className={styles.formDesc}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Описание"
+        />
+        <div className={styles.topBarActions}>
+          <button type="button" className={styles.saveBtn} onClick={save} disabled={saving}>
+            {saving ? "Сохранение…" : "Сохранить"}
+          </button>
+          <button type="button" className={styles.backBtn} onClick={() => navigate("/projects")}>
+            К списку
+          </button>
+        </div>
+      </div>
+
       {error && <div className={styles.error}>{error}</div>}
 
-      <div className={styles.section}>
-        <label>
-          Название
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Название формы"
-          />
-        </label>
-        <label>
-          Описание
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Описание"
-            rows={2}
-          />
-        </label>
-      </div>
-
-      {!projectId && (
-        <p className={styles.hint}>
-          Откройте форму из раздела «Проекты» → проект → вкладка «Формы», чтобы добавлять поля из проекта.
-        </p>
-      )}
-
-      {project && (
-        <div className={styles.section}>
-          <h2>Поля из проекта «{project.name}»</h2>
-          {projectFields.length === 0 ? (
-            <p className={styles.hint}>
-              В настройках проекта нет полей. Добавьте поля во вкладке «Настройки» проекта, затем вернитесь сюда.
-            </p>
-          ) : projectFieldsAvailable.length > 0 ? (
-            <>
-              <p className={styles.hint}>
-                Добавьте нужные поля в форму — ключ совпадёт со списком документов.
+      <div className={styles.main}>
+        <aside className={styles.palette}>
+          <div className={styles.paletteTitle}>Поля из проекта</div>
+          <div className={styles.paletteList}>
+            {!projectId && (
+              <p className={styles.hintNoProject}>
+                Откройте форму из вкладки «Формы» проекта, чтобы добавлять поля.
               </p>
-              <ul className={styles.projectFieldList}>
-                {projectFieldsAvailable.map((pf, i) => (
-                  <li key={pf.key || i}>
-                    <span>{pf.label || pf.key} ({pf.field_type})</span>
-                    <button
-                      type="button"
-                      className={styles.addFromProjectBtn}
-                      onClick={() => addFieldFromProject(pf)}
-                    >
-                      Добавить в форму
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className={styles.hint}>
-              Все поля проекта уже добавлены в форму.
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className={styles.section}>
-        <h2>Поля формы</h2>
-        <p className={styles.hint}>Удалить поле из формы можно кнопкой ×.</p>
-        <ul className={styles.fieldList}>
-          {fields.map((f, i) => (
-            <li
-              key={i}
-              className={selectedFieldIndex === i ? styles.selected : ""}
-              onClick={() => setSelectedFieldIndex(i)}
-            >
-              <span className={styles.fieldName}>
-                {f.name || `Поле ${i + 1}`} ({f.field_type})
-              </span>
-              <button
-                type="button"
-                className={styles.removeBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeField(i);
-                }}
-                aria-label="Удалить"
+            )}
+            {project && projectFieldsAvailable.length === 0 && projectFields.length > 0 && (
+              <p className={styles.paletteEmpty}>Все поля уже добавлены</p>
+            )}
+            {project && projectFields.length === 0 && (
+              <p className={styles.paletteEmpty}>В настройках проекта нет полей</p>
+            )}
+            {projectFieldsAvailable.map((pf, i) => (
+              <div
+                key={pf.key || i}
+                className={styles.paletteItem}
+                draggable
+                onDragStart={(e) => handlePaletteDragStart(e, pf)}
+                onClick={() => addFieldFromProject(pf)}
               >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {selectedField && (
-        <div className={styles.section}>
-          <h2>Поле: {selectedField.label || selectedField.name || "—"}</h2>
-          <div className={styles.fieldForm}>
-            <p className={styles.fieldReadOnly}>
-              Ключ: <strong>{selectedField.name}</strong> · Тип: {selectedField.field_type}
-              {selectedField.catalog_id && ` · Справочник: ${catalogList.find((c) => c.id === selectedField.catalog_id)?.name ?? selectedField.catalog_id}`}
-            </p>
-            <label className={styles.checkLabel}>
-              <input
-                type="checkbox"
-                checked={selectedField.required}
-                onChange={(e) =>
-                  updateField(selectedFieldIndex!, { required: e.target.checked })
-                }
-              />
-              Обязательное
-            </label>
+                <span>{pf.label || pf.key}</span>
+                <span className={styles.paletteItemType}>{fieldTypeLabel(pf.field_type)}</span>
+              </div>
+            ))}
           </div>
-          <h3>Правила доступа к полю</h3>
-          <AccessConstructor
-            rules={selectedField.access_rules || []}
-            roles={roles}
-            onChange={(rules) => updateAccessRules(selectedFieldIndex!, rules)}
-          />
-        </div>
-      )}
+        </aside>
 
-      <div className={styles.actions}>
-        <button type="button" onClick={save} disabled={saving}>
-          {saving ? "Сохранение…" : "Сохранить"}
-        </button>
-        <button type="button" onClick={() => navigate("/forms")}>
-          К списку
-        </button>
+        <section className={styles.canvas}>
+          <div className={styles.canvasTitle}>Форма</div>
+          <div
+            className={styles.canvasScroll}
+            onDragOver={handleCanvasDragOver}
+            onDragLeave={handleCanvasDragLeave}
+            onDrop={handleCanvasDrop}
+          >
+            {fields.length === 0 ? (
+              <div
+                className={`${styles.canvasEmpty} ${canvasDragOver ? styles.dragOver : ""}`}
+              >
+                {canvasDragOver
+                  ? "Отпустите, чтобы добавить поле"
+                  : "Перетащите поля сюда или нажмите на поле в палитре"}
+              </div>
+            ) : (
+              <div className={styles.canvasInner}>
+                <div ref={canvasFieldsRef} className={styles.canvasFields}>
+                  {fields.map((f, i) => (
+                    <div
+                      key={`${f.name}-${i}`}
+                      className={`${styles.canvasBlock} ${
+                        selectedFieldIndex === i ? styles.selected : ""
+                      } ${dragOverIndex === i ? styles.canvasBlockDropBefore : ""} ${
+                        draggingBlockIndex === i ? styles.dragging : ""
+                      }`}
+                      style={{ gridColumn: `span ${f.width ?? 12}` }}
+                      onClick={() => setSelectedFieldIndex(i)}
+                      onDragOver={(e) => handleBlockDragOver(e, i)}
+                      onDragLeave={handleBlockDragLeave}
+                      onDrop={(e) => handleBlockDrop(e, i)}
+                    >
+                      <div
+                        className={styles.dragHandle}
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          handleBlockDragStart(e, i);
+                        }}
+                        onDragEnd={handleBlockDragEnd}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className={styles.blockPreview}>
+                        <span className={styles.blockLabel}>{f.label || f.name || "Поле"}</span>
+                        <span className={styles.blockMeta}>
+                          {fieldTypeLabel(f.field_type)}
+                          {f.required && " · Обязательное"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.blockRemove}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeField(i);
+                        }}
+                        aria-label="Удалить"
+                      >
+                        ×
+                      </button>
+                      <div
+                        className={styles.resizeHandle}
+                        onMouseDown={(e) => handleResizeStart(e, i)}
+                        onClick={(e) => e.stopPropagation()}
+                        title="Тяните для изменения ширины"
+                        aria-label="Изменить ширину"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <aside className={styles.properties}>
+          <div className={styles.propertiesTitle}>Свойства</div>
+          <div className={styles.propertiesScroll}>
+            {!selectedField ? (
+              <p className={styles.propertiesEmpty}>
+                Выберите поле на холсте, чтобы изменить свойства
+              </p>
+            ) : (
+              <>
+                <div className={styles.propertiesSection}>
+                  <h3>Поле</h3>
+                  <p className={styles.fieldReadOnly}>
+                    Ключ: <strong>{selectedField.name}</strong> · Тип: {fieldTypeLabel(selectedField.field_type)}
+                    {selectedField.catalog_id &&
+                      ` · Справочник: ${catalogList.find((c) => c.id === selectedField.catalog_id)?.name ?? selectedField.catalog_id}`}
+                  </p>
+                  <label className={styles.checkLabel}>
+                    <input
+                      type="checkbox"
+                      checked={selectedField.required}
+                      onChange={(e) =>
+                        updateField(selectedFieldIndex!, { required: e.target.checked })
+                      }
+                    />
+                    Обязательное
+                  </label>
+                  <div className={styles.widthControl}>
+                    <span className={styles.widthLabel}>Ширина (колонок из 12):</span>
+                    <div className={styles.widthButtons}>
+                      {([12, 6, 4, 3] as const).map((w) => (
+                        <button
+                          key={w}
+                          type="button"
+                          className={`${styles.widthBtn} ${(selectedField.width ?? 12) === w ? styles.widthBtnActive : ""}`}
+                          onClick={() => updateField(selectedFieldIndex!, { width: w })}
+                          title={w === 12 ? "Вся строка" : w === 6 ? "Половина" : w === 4 ? "Треть" : "Четверть"}
+                        >
+                          {w === 12 ? "100%" : w === 6 ? "½" : w === 4 ? "⅓" : "¼"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.propertiesSection}>
+                  <h3>Правила доступа</h3>
+                  <AccessConstructor
+                    rules={selectedField.access_rules || []}
+                    roles={roles}
+                    onChange={(rules) => updateAccessRules(selectedFieldIndex!, rules)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );

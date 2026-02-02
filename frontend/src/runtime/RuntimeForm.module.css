@@ -9,8 +9,8 @@
 }
 
 .form {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
   gap: 1rem;
 }
 
@@ -18,6 +18,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .field span {
@@ -45,7 +46,8 @@
 }
 
 .actions {
-  margin-top: 1rem;
+  grid-column: 1 / -1;
+  margin-top: 0.5rem;
 }
 
 .actions button {

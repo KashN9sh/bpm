@@ -83,7 +83,11 @@ export function RuntimeForm() {
       )}
       <form onSubmit={handleSubmit} className={styles.form}>
         {form_definition.fields.map((field) => (
-          <label key={field.name} className={styles.field}>
+          <label
+            key={field.name}
+            className={styles.field}
+            style={{ gridColumn: `span ${field.width ?? 12}` }}
+          >
             <span>{field.label || field.name}</span>
             {field.field_type === "textarea" ? (
               <textarea

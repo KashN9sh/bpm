@@ -27,6 +27,7 @@ class FieldSchema(BaseModel):
     catalog_id: str | None = None
     validations: dict | None = None
     access_rules: list[FieldAccessRuleSchema] | None = None
+    width: int | None = None  # колонок из 12 (1-12)
 
 
 class FormCreate(BaseModel):
@@ -63,6 +64,7 @@ def _form_to_response(form) -> FormResponse:
                 {"role_id": r.role_id, "expression": r.expression, "permission": r.permission.value}
                 for r in (f.access_rules or [])
             ],
+            "width": f.width,
         })
     return FormResponse(
         id=str(form.id),

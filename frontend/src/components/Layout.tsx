@@ -82,7 +82,7 @@ export function Layout() {
             return (
             <Link
               key={p.id}
-              to={`/projects/${p.id}`}
+              to={`/projects/${p.id}/documents`}
               className={isProjectActive ? styles.navLinkActive : styles.navLink}
               title={collapsed ? p.name : undefined}
             >

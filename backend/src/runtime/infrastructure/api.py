@@ -114,6 +114,7 @@ async def _form_to_dict(form, context: dict | None = None, catalog_repo: Catalog
             "options": options,
             "validations": f.validations,
             "read_only": permission == "read",
+            "width": f.width,
         })
     return {
         "id": str(form.id),

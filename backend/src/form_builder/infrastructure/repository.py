@@ -21,6 +21,7 @@ def _serialize_field(f: FieldDefinition) -> dict:
             {"role_id": r.role_id, "expression": r.expression, "permission": r.permission.value}
             for r in (f.access_rules or [])
         ],
+        "width": f.width,
     }
 
 
@@ -42,6 +43,7 @@ def _deserialize_field(d: dict) -> FieldDefinition:
         catalog_id=d.get("catalog_id"),
         validations=d.get("validations"),
         access_rules=access_rules,
+        width=d.get("width"),
     )
 
 

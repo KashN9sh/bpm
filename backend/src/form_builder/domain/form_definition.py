@@ -39,6 +39,7 @@ class FieldDefinition:
     catalog_id: str | None = None  # если задан — варианты берутся из справочника (options игнорируются при отдаче)
     validations: dict[str, Any] | None = None  # e.g. {"min": 0, "max": 100}
     access_rules: list[FieldAccessRule] = field(default_factory=list)  # правила видимости/редактирования
+    width: int | None = None  # колонок из 12 (1-12), 12 = вся строка, 6 = половина, 4 = треть
 
 
 @dataclass

@@ -116,6 +116,8 @@ export interface FieldSchema {
   catalog_id?: string | null;
   validations?: Record<string, unknown> | null;
   access_rules?: FieldAccessRuleSchema[] | null;
+  /** Колонок из 12 (1–12): 12 = вся строка, 6 = половина, 4 = треть, 3 = четверть */
+  width?: number | null;
 }
 
 export interface FormResponse {
@@ -308,6 +310,7 @@ export interface CurrentFormResponse {
       required: boolean;
       options?: { value: string; label: string }[] | null;
       validations?: Record<string, unknown> | null;
+      width?: number | null;
     }>;
   };
   submission_data: Record<string, unknown> | null;

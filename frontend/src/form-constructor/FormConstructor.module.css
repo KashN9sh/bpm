@@ -1,160 +1,469 @@
+/* Визуальный конструктор в стиле Figma/Tilda */
 .wrap {
-  padding: 1.5rem;
-  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 2rem);
+  max-height: 900px;
+  margin: 1rem;
+  background: var(--color-bg, #fff);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
 }
 
 .error {
   background-color: #fef2f2;
   color: var(--color-error);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-sm);
-  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
   font-size: 0.875rem;
+  flex-shrink: 0;
 }
 
-.section {
-  margin-bottom: 2rem;
-}
-
-.section label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.section input[type="text"],
-.section input[type="number"],
-.section select,
-.section textarea {
-  width: 100%;
-  max-width: 400px;
-  padding: 0.5rem;
-  margin-top: 0.25rem;
-}
-
-.hint {
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
-  margin: 0.5rem 0 0.75rem;
-}
-
-.select {
-  width: 100%;
-  max-width: 400px;
-  padding: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.projectFieldList {
-  list-style: none;
-  padding: 0;
-  margin: 0.5rem 0 1rem;
-}
-
-.projectFieldList li {
+.topBar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid var(--color-border);
   gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
 }
 
-.addFromProjectBtn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
+.formName {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+.formName:hover {
+  border-color: var(--color-border);
+}
+
+.formName:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.formDesc {
+  flex: 1;
+  min-width: 0;
+  max-width: 240px;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  padding: 0.4rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+.formDesc::placeholder {
+  color: var(--color-text-muted);
+}
+
+.formDesc:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.topBarActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.topBarActions button {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.saveBtn {
   background: var(--color-accent);
   color: #fff;
   border: none;
   cursor: pointer;
 }
 
-.addFromProjectBtn:hover {
+.saveBtn:hover:not(:disabled) {
   background: var(--color-accent-hover);
 }
 
-.addBtn {
-  margin-bottom: 1rem;
-}
-
-.fieldList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.fieldList li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.25rem;
+.backBtn {
+  background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  color: var(--color-text);
   cursor: pointer;
 }
 
-.fieldList li.selected {
+.backBtn:hover {
+  background: var(--color-border);
+}
+
+.main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+}
+
+.palette {
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.paletteTitle {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.paletteList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.paletteEmpty {
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.paletteItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border);
+  background: var(--color-bg);
+  cursor: grab;
+  user-select: none;
+}
+
+.paletteItem:hover {
   border-color: var(--color-accent);
   background: var(--color-accent-tint);
 }
 
-.fieldName {
-  flex: 1;
+.paletteItem:active {
+  cursor: grabbing;
 }
 
-.removeBtn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
+.paletteItemType {
+  font-size: 0.7rem;
   color: var(--color-text-muted);
-  padding: 0 0.25rem;
+  text-transform: uppercase;
 }
 
-.removeBtn:hover {
+.canvas {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-canvas-bg, #f8f9fa);
+}
+
+.canvasTitle {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.canvasScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.canvasInner {
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: 200px;
+  background: #fff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.canvasEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  margin: 0 1rem 1rem;
+}
+
+.canvasEmpty.dragOver {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+}
+
+.canvasFields {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.canvasBlock {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.canvasBlock.selected {
+  border-color: var(--color-accent);
+  border-width: 2px;
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.canvasBlock:hover {
+  border-color: var(--color-border);
+}
+
+.canvasBlock.selected:hover {
+  border-color: var(--color-accent);
+}
+
+.canvasBlock.dragging {
+  opacity: 0.5;
+}
+
+.canvasBlockDropBefore {
+  border-top: 3px solid var(--color-accent);
+  margin-top: 2px;
+}
+
+.dragHandle {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: grab;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--color-border);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragHandle:hover {
+  color: var(--color-accent);
+  background: var(--color-accent-tint);
+}
+
+.dragHandle::after {
+  content: "⋮⋮";
+  font-size: 0.75rem;
+  letter-spacing: -0.2em;
+}
+
+.blockPreview {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.blockLabel {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.blockMeta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+}
+
+.resizeHandle {
+  flex-shrink: 0;
+  width: 8px;
+  min-width: 8px;
+  cursor: col-resize;
+  background: transparent;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: background 0.15s;
+}
+
+.resizeHandle:hover,
+.canvasBlock:hover .resizeHandle,
+.canvasBlock:has(.resizeHandle):active .resizeHandle {
+  background: var(--color-accent-tint);
+}
+
+.blockRemove {
+  flex-shrink: 0;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.blockRemove:hover {
   color: var(--color-error);
+  background: #fef2f2;
 }
 
-.fieldForm label {
-  margin-bottom: 0.75rem;
+.blockRemove:hover ~ .resizeHandle {
+  background: #fef2f2;
+}
+
+.properties {
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.propertiesTitle {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.propertiesScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.propertiesEmpty {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 2rem 0.5rem;
+}
+
+.propertiesSection {
+  margin-bottom: 1.25rem;
+}
+
+.propertiesSection h3 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin: 0 0 0.5rem;
 }
 
 .fieldReadOnly {
   color: var(--color-text-muted);
-  font-size: 0.9375rem;
-  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  margin: 0 0 0.75rem;
 }
 
 .checkLabel {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
 }
 
 .checkLabel input {
   width: auto;
-  margin: 0;
 }
 
-.actions {
+.widthControl {
+  margin-top: 0.75rem;
+}
+
+.widthLabel {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.widthButtons {
   display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 0.25rem;
+  flex-wrap: wrap;
 }
 
-.actions button {
-  padding: 0.5rem 1rem;
+.widthBtn {
+  flex: 1;
+  min-width: 2.5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.widthBtn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+}
+
+.widthBtnActive {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
   font-weight: 500;
 }
 
-.actions button:first-of-type {
-  background-color: var(--color-accent);
-  color: #fff;
-  border: none;
-}
-
-.actions button:first-of-type:hover:not(:disabled) {
-  background-color: var(--color-accent-hover);
+.hintNoProject {
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  background: var(--color-accent-tint);
+  border-radius: var(--radius-sm);
+  margin: 0.5rem;
 }
