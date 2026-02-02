@@ -1,0 +1,192 @@
+.wrap {
+  padding: 1.5rem;
+  max-width: 900px;
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  margin: 0 0 1rem;
+}
+
+.hint code {
+  background: var(--color-bg);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+}
+
+.error {
+  background-color: #fef2f2;
+  color: var(--color-error);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.addBtn {
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.addBtn:hover {
+  background: var(--color-border);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.itemName {
+  font-weight: 500;
+  min-width: 0;
+}
+
+.itemType {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.editBtn {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.editBtn:hover {
+  background: var(--color-accent-tint);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.removeBtn {
+  padding: 0.25rem 0.5rem;
+  font-size: 1.1rem;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.removeBtn:hover {
+  color: var(--color-error);
+}
+
+.editor {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg, #f8f9fa);
+}
+
+.editorTitle {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.labelText {
+  font-size: 0.875rem;
+}
+
+.label:last-of-type {
+  margin-bottom: 0;
+}
+
+.input,
+.select {
+  max-width: 400px;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.monacoWrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+.monacoWrap :global(.monaco-editor) {
+  padding-top: 8px;
+}
+
+/* Подсказки автодополнения могут выходить за границы редактора */
+.monacoWrap :global(.monaco-editor .monaco-editor-overlaymessage),
+.monacoWrap :global(.monaco-editor .editor-widget) {
+  z-index: 100;
+}
+
+.editorActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.saveBtn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.saveBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: var(--color-border);
+}

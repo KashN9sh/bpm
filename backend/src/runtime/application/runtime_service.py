@@ -2,14 +2,16 @@ from uuid import UUID
 
 from src.runtime.domain import ProcessInstance, FormSubmission, InstanceStatus
 from src.rules.evaluator import evaluate_expression
+from src.rules.validator_runner import run_step_access_validators
 
 
 class RuntimeService:
-    def __init__(self, instance_repo, submission_repo, process_repo, form_repo):
+    def __init__(self, instance_repo, submission_repo, process_repo, form_repo, project_repo=None):
         self._instance_repo = instance_repo
         self._submission_repo = submission_repo
         self._process_repo = process_repo
         self._form_repo = form_repo
+        self._project_repo = project_repo
 
     async def start_process(self, process_definition_id: UUID) -> ProcessInstance | None:
         process = await self._process_repo.get_by_id(process_definition_id)
@@ -104,6 +106,7 @@ class RuntimeService:
         node_id: str,
         form_definition_id: UUID,
         data: dict,
+        role_ids: list[str] | None = None,
     ) -> ProcessInstance | None:
         instance = await self._instance_repo.get_by_id(instance_id)
         if not instance or not instance.is_active or instance.current_node_id != node_id:
@@ -115,12 +118,6 @@ class RuntimeService:
         if not node or str(node.form_definition_id) != str(form_definition_id):
             return None
 
-        await self._submission_repo.create(
-            process_instance_id=instance_id,
-            node_id=node_id,
-            form_definition_id=form_definition_id,
-            data=data,
-        )
         new_context = {**instance.context, node_id: data}
         edges = process.get_edges_from(node_id)
         next_node_id = None
@@ -138,6 +135,19 @@ class RuntimeService:
                 break
             if not next_node_id and edges:
                 next_node_id = edges[0].target_node_id
+        if next_node_id and self._project_repo and process.project_id:
+            project = await self._project_repo.get_by_id(process.project_id)
+            if project and project.validators:
+                flat_ctx = self._flatten_context(new_context)
+                flat_ctx["role_ids"] = role_ids or []
+                if not run_step_access_validators(project.validators, flat_ctx, next_node_id):
+                    return None
+        await self._submission_repo.create(
+            process_instance_id=instance_id,
+            node_id=node_id,
+            form_definition_id=form_definition_id,
+            data=data,
+        )
         next_node = process.get_node(next_node_id) if next_node_id else None
         if not next_node:
             await self._instance_repo.update(

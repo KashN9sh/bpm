@@ -49,6 +49,12 @@ export function ProjectPage() {
         >
           Процессы
         </NavLink>
+        <NavLink
+          to={`/projects/${projectId}/validators`}
+          className={({ isActive }) => (isActive ? styles.tabActive : styles.tab)}
+        >
+          Валидаторы
+        </NavLink>
       </nav>
       <div className={styles.content}>
         <Outlet />

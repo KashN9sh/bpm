@@ -13,7 +13,10 @@
 }
 
 .wrap label {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
   margin-bottom: 1rem;
 }
 
@@ -22,7 +25,7 @@
   width: 100%;
   max-width: 400px;
   padding: 0.5rem;
-  margin-top: 0.25rem;
+  margin-top: 0;
 }
 
 .section {
@@ -36,6 +39,18 @@
 
 .addBtn {
   margin-bottom: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.addBtn:hover {
+  background: var(--color-border);
 }
 
 .itemsList {

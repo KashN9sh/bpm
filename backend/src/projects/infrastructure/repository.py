@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.projects.domain import Project, ProjectField
+from src.projects.domain import Project, ProjectField, Validator
 from src.projects.infrastructure.models import ProjectModel
 
 
@@ -54,6 +54,31 @@ def _serialize_fields(fields: list[ProjectField]) -> str:
     return json.dumps(arr)
 
 
+def _parse_validators_schema(raw: str | None) -> list[Validator]:
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list):
+            return []
+        out = []
+        for item in parsed:
+            if isinstance(item, dict) and "name" in item and "type" in item and "code" in item:
+                out.append(Validator(
+                    name=str(item["name"]),
+                    type=str(item["type"]),
+                    code=str(item["code"]),
+                ))
+        return out
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def _serialize_validators(validators: list[Validator]) -> str:
+    arr = [{"name": v.name, "type": v.type, "code": v.code} for v in validators]
+    return json.dumps(arr)
+
+
 class ProjectRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
@@ -65,6 +90,7 @@ class ProjectRepository:
         sort_order: int = 0,
         list_columns: list[str] | None = None,
         fields: list[ProjectField] | None = None,
+        validators: list[Validator] | None = None,
     ) -> Project:
         cols = list_columns if list_columns is not None else ["process_name", "status"]
         model = ProjectModel(
@@ -73,6 +99,7 @@ class ProjectRepository:
             sort_order=sort_order,
             list_columns=json.dumps(cols),
             fields_schema=_serialize_fields(fields or []),
+            validators_schema=_serialize_validators(validators or []),
         )
         self._session.add(model)
         await self._session.flush()
@@ -84,6 +111,7 @@ class ProjectRepository:
             sort_order=model.sort_order or 0,
             list_columns=_parse_list_columns(model.list_columns),
             fields=_parse_fields_schema(getattr(model, "fields_schema", None)),
+            validators=_parse_validators_schema(getattr(model, "validators_schema", None)),
         )
 
     async def get_by_id(self, project_id: UUID) -> Project | None:
@@ -100,6 +128,7 @@ class ProjectRepository:
             sort_order=row.sort_order or 0,
             list_columns=_parse_list_columns(getattr(row, "list_columns", None)),
             fields=_parse_fields_schema(getattr(row, "fields_schema", None)),
+            validators=_parse_validators_schema(getattr(row, "validators_schema", None)),
         )
 
     async def list_all(self) -> list[Project]:
@@ -115,6 +144,7 @@ class ProjectRepository:
                 sort_order=r.sort_order or 0,
                 list_columns=_parse_list_columns(getattr(r, "list_columns", None)),
                 fields=_parse_fields_schema(getattr(r, "fields_schema", None)),
+                validators=_parse_validators_schema(getattr(r, "validators_schema", None)),
             )
             for r in rows
         ]
@@ -127,6 +157,7 @@ class ProjectRepository:
         sort_order: int | None = None,
         list_columns: list[str] | None = None,
         fields: list[ProjectField] | None = None,
+        validators: list[Validator] | None = None,
     ) -> Project | None:
         result = await self._session.execute(
             select(ProjectModel).where(ProjectModel.id == str(project_id))
@@ -144,6 +175,8 @@ class ProjectRepository:
             row.list_columns = json.dumps(list_columns)
         if fields is not None:
             row.fields_schema = _serialize_fields(fields)
+        if validators is not None:
+            row.validators_schema = _serialize_validators(validators)
         await self._session.flush()
         await self._session.refresh(row)
         return Project(
@@ -153,6 +186,7 @@ class ProjectRepository:
             sort_order=row.sort_order or 0,
             list_columns=_parse_list_columns(getattr(row, "list_columns", None)),
             fields=_parse_fields_schema(getattr(row, "fields_schema", None)),
+            validators=_parse_validators_schema(getattr(row, "validators_schema", None)),
         )
 
     async def delete(self, project_id: UUID) -> bool:

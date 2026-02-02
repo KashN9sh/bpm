@@ -4,6 +4,14 @@ from typing import Any
 
 
 @dataclass
+class Validator:
+    """Валидатор проекта: скрытие полей или доступ к этапу. Выполняется в песочнице Python."""
+    name: str
+    type: str  # "field_visibility" | "step_access"
+    code: str
+
+
+@dataclass
 class ProjectField:
     """Определение поля проекта: используется в конструкторе форм и в списке документов."""
     key: str
@@ -22,3 +30,4 @@ class Project:
     sort_order: int = 0
     list_columns: list[str] = field(default_factory=lambda: ["process_name", "status"])
     fields: list[ProjectField] = field(default_factory=list)
+    validators: list[Validator] = field(default_factory=list)

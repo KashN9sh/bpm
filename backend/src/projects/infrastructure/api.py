@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from src.database import get_session
 from src.identity.domain import User
 from src.identity.infrastructure.deps import get_current_user_required, require_admin
-from src.projects.domain import ProjectField
+from src.projects.domain import ProjectField, Validator
 from src.projects.infrastructure.repository import ProjectRepository
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -20,12 +20,19 @@ class ProjectFieldSchema(BaseModel):
     options: list[dict] | None = None
 
 
+class ValidatorSchema(BaseModel):
+    name: str
+    type: str  # "field_visibility" | "step_access"
+    code: str
+
+
 class ProjectCreate(BaseModel):
     name: str
     description: str = ""
     sort_order: int = 0
     list_columns: list[str] = ["process_name", "status"]
     fields: list[ProjectFieldSchema] = []
+    validators: list[ValidatorSchema] = []
 
 
 class ProjectUpdate(BaseModel):
@@ -34,6 +41,7 @@ class ProjectUpdate(BaseModel):
     sort_order: int | None = None
     list_columns: list[str] | None = None
     fields: list[ProjectFieldSchema] | None = None
+    validators: list[ValidatorSchema] | None = None
 
 
 class ProjectResponse(BaseModel):
@@ -43,6 +51,7 @@ class ProjectResponse(BaseModel):
     sort_order: int
     list_columns: list[str]
     fields: list[ProjectFieldSchema] = []
+    validators: list[ValidatorSchema] = []
 
 
 def get_project_repo(session=Depends(get_session)) -> ProjectRepository:
@@ -59,8 +68,17 @@ def _field_to_schema(f) -> ProjectFieldSchema:
     )
 
 
+def _validator_to_schema(v) -> ValidatorSchema:
+    return ValidatorSchema(
+        name=v.name,
+        type=v.type,
+        code=v.code,
+    )
+
+
 def _to_response(p) -> ProjectResponse:
     fields = getattr(p, "fields", None) or []
+    validators = getattr(p, "validators", None) or []
     return ProjectResponse(
         id=str(p.id),
         name=p.name,
@@ -68,6 +86,7 @@ def _to_response(p) -> ProjectResponse:
         sort_order=p.sort_order,
         list_columns=getattr(p, "list_columns", None) or ["process_name", "status"],
         fields=[_field_to_schema(f) for f in fields],
+        validators=[_validator_to_schema(v) for v in validators],
     )
 
 
@@ -84,6 +103,15 @@ def _body_fields_to_domain(fields: list) -> list[ProjectField]:
     ]
 
 
+def _body_validators_to_domain(validators: list | None) -> list[Validator]:
+    if validators is None:
+        return []
+    return [
+        Validator(name=v.name, type=v.type or "field_visibility", code=v.code or "")
+        for v in validators
+    ]
+
+
 @router.post("", response_model=ProjectResponse)
 async def create_project(
     body: ProjectCreate,
@@ -96,6 +124,7 @@ async def create_project(
         sort_order=body.sort_order,
         list_columns=body.list_columns,
         fields=_body_fields_to_domain(body.fields or []),
+        validators=_body_validators_to_domain(body.validators or []),
     )
     return _to_response(project)
 
@@ -135,6 +164,7 @@ async def update_project(
         sort_order=body.sort_order,
         list_columns=body.list_columns,
         fields=_body_fields_to_domain(body.fields) if body.fields is not None else None,
+        validators=_body_validators_to_domain(body.validators) if body.validators is not None else None,
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

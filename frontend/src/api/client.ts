@@ -178,6 +178,12 @@ export interface ProjectFieldSchema {
   options?: Record<string, unknown>[] | null;
 }
 
+export interface ValidatorSchema {
+  name: string;
+  type: "field_visibility" | "step_access";
+  code: string;
+}
+
 export interface ProjectResponse {
   id: string;
   name: string;
@@ -185,6 +191,7 @@ export interface ProjectResponse {
   sort_order: number;
   list_columns: string[];
   fields: ProjectFieldSchema[];
+  validators: ValidatorSchema[];
 }
 
 const BASE_LIST_COLUMN_OPTIONS: { key: string; label: string }[] = [
@@ -210,6 +217,7 @@ export const projects = {
     sort_order?: number;
     list_columns?: string[];
     fields?: ProjectFieldSchema[];
+    validators?: ValidatorSchema[];
   }) =>
     api<ProjectResponse>("/api/projects", {
       method: "POST",
@@ -221,6 +229,7 @@ export const projects = {
     sort_order?: number;
     list_columns?: string[];
     fields?: ProjectFieldSchema[];
+    validators?: ValidatorSchema[];
   }) =>
     api<ProjectResponse>(`/api/projects/${id}`, {
       method: "PATCH",

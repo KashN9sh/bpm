@@ -10,6 +10,7 @@ import { ProjectPage } from "./pages/ProjectPage";
 import { ProjectEditor } from "./pages/ProjectEditor";
 import { ProjectForms } from "./pages/ProjectForms";
 import { ProjectProcesses } from "./pages/ProjectProcesses";
+import { ProjectValidators } from "./pages/ProjectValidators";
 import { FormList, FormConstructor } from "./form-constructor";
 import { CatalogList, CatalogEditor } from "./catalogs";
 import { ProcessEditor } from "./process-editor";
@@ -40,6 +41,7 @@ function App() {
             <Route path="settings" element={<ProjectEditor />} />
             <Route path="forms" element={<ProjectForms />} />
             <Route path="processes" element={<ProjectProcesses />} />
+            <Route path="validators" element={<ProjectValidators />} />
           </Route>
           <Route path="projects/:projectId/documents" element={<ProjectDocuments />} />
           <Route path="projects/:projectId/documents/new" element={<StartProcess />} />

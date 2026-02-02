@@ -12,6 +12,11 @@ from src.runtime.infrastructure.repository import ProcessInstanceRepository, For
 from src.process_design.infrastructure.repository import ProcessDefinitionRepository
 from src.form_builder.infrastructure.repository import FormDefinitionRepository
 from src.catalogs.infrastructure.repository import CatalogRepository
+from src.projects.infrastructure.repository import ProjectRepository
+from src.rules.validator_runner import (
+    run_field_visibility_validators,
+    run_step_access_validators,
+)
 
 router = APIRouter(prefix="/api/runtime", tags=["runtime"])
 
@@ -72,23 +77,38 @@ def get_catalog_repo(session=Depends(get_session)) -> CatalogRepository:
     return CatalogRepository(session)
 
 
+def get_project_repo(session=Depends(get_session)) -> ProjectRepository:
+    return ProjectRepository(session)
+
+
 def get_runtime_service(
     instance_repo: ProcessInstanceRepository = Depends(get_instance_repo),
     submission_repo: FormSubmissionRepository = Depends(get_submission_repo),
     process_repo: ProcessDefinitionRepository = Depends(get_process_repo),
     form_repo: FormDefinitionRepository = Depends(get_form_repo),
+    project_repo: ProjectRepository = Depends(get_project_repo),
 ) -> RuntimeService:
     return RuntimeService(
         instance_repo=instance_repo,
         submission_repo=submission_repo,
         process_repo=process_repo,
         form_repo=form_repo,
+        project_repo=project_repo,
     )
 
 
-async def _form_to_dict(form, context: dict | None = None, catalog_repo: CatalogRepository | None = None):
+async def _form_to_dict(
+    form,
+    context: dict | None = None,
+    catalog_repo: CatalogRepository | None = None,
+    project=None,
+):
     role_ids = (context or {}).get("role_ids", [])
     ctx = {**(context or {}), "role_ids": role_ids}
+    validator_overrides = {}
+    if project and getattr(project, "validators", None):
+        flat_ctx = _flatten_context_for_validators(ctx)
+        validator_overrides = run_field_visibility_validators(project.validators, flat_ctx)
     fields_out = []
     for f in form.fields:
         rules = [
@@ -96,6 +116,8 @@ async def _form_to_dict(form, context: dict | None = None, catalog_repo: Catalog
             for r in (f.access_rules or [])
         ]
         permission = evaluate_field_access(rules, ctx, "write")
+        if f.name in validator_overrides:
+            permission = validator_overrides[f.name]
         if permission == "hidden":
             continue
         options = f.options
@@ -149,12 +171,27 @@ async def start_process(
     )
 
 
+def _flatten_context_for_validators(ctx: dict) -> dict:
+    """Плоский контекст для валидаторов: данные всех узлов + role_ids."""
+    flat = {}
+    for k, v in (ctx or {}).items():
+        if k == "role_ids":
+            flat["role_ids"] = v
+        elif isinstance(v, dict):
+            flat.update(v)
+    if "role_ids" not in flat:
+        flat["role_ids"] = []
+    return flat
+
+
 @router.get("/instances/{instance_id}/current-form", response_model=CurrentFormResponse)
 async def get_current_form(
     instance_id: UUID,
     user: User = Depends(get_current_user_required),
     service: RuntimeService = Depends(get_runtime_service),
     catalog_repo: CatalogRepository = Depends(get_catalog_repo),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    process_repo: ProcessDefinitionRepository = Depends(get_process_repo),
 ):
     role_ids = [str(r) for r in user.role_ids]
     result = await service.get_current_form(instance_id, role_ids=role_ids)
@@ -164,8 +201,19 @@ async def get_current_form(
     node_id = result["node_id"]
     instance = result["instance"]
     context = {**instance.context, "role_ids": role_ids}
+    project = None
+    process_def = await process_repo.get_by_id(instance.process_definition_id)
+    if process_def and process_def.project_id:
+        project = await project_repo.get_by_id(process_def.project_id)
+        if project and project.validators:
+            flat_ctx = _flatten_context_for_validators(context)
+            if not run_step_access_validators(project.validators, flat_ctx, node_id):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Access to this step denied by validator",
+                )
     submission_data = await service.get_submission_data(instance_id, node_id)
-    form_def = await _form_to_dict(form, context, catalog_repo)
+    form_def = await _form_to_dict(form, context, catalog_repo, project=project)
     return CurrentFormResponse(
         instance_id=str(instance.id),
         node_id=node_id,
@@ -188,9 +236,14 @@ async def submit_form(
         raise HTTPException(status_code=400, detail="Invalid step or process state")
     form = result["form"]
     form_def_id = form.id
-    instance = await service.submit_form(instance_id, node_id, form_def_id, body.data)
+    instance = await service.submit_form(
+        instance_id, node_id, form_def_id, body.data, role_ids=role_ids
+    )
     if not instance:
-        raise HTTPException(status_code=400, detail="Submit failed")
+        raise HTTPException(
+            status_code=403,
+            detail="Submit failed or access to next step denied by validator",
+        )
     return {
         "instance_id": str(instance.id),
         "status": instance.status.value,
