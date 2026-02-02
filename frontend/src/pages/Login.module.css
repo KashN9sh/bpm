@@ -3,11 +3,9 @@
   margin: 2rem auto;
 }
 
-.card {
-  background-color: var(--color-surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
+.cardForm {
   padding: 2rem;
+  max-width: 400px;
 }
 
 .title {
@@ -37,20 +35,10 @@
 .form button {
   width: 100%;
   margin-top: 0.5rem;
-  padding: 0.625rem 1rem;
-  background-color: var(--color-accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-}
-
-.form button:hover:not(:disabled) {
-  background-color: var(--color-accent-hover);
 }
 
 .error {
-  background-color: #fef2f2;
+  background-color: var(--color-error-tint);
   color: var(--color-error);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);

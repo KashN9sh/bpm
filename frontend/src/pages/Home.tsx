@@ -31,7 +31,7 @@ export function Home() {
               <Link
                 key={s.to}
                 to={s.to}
-                className={`${styles.card} ${s.primary ? styles.cardWithStrip : ""}`}
+                className={`card ${s.primary ? "cardWithStrip" : ""} ${styles.cardLink}`}
               >
                 <h3 className={styles.cardTitle}>{s.title}</h3>
                 <p className={styles.cardDesc}>{s.desc}</p>

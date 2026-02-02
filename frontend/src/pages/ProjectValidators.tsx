@@ -178,7 +178,7 @@ export function ProjectValidators() {
         Валидаторы на Python: скрытие полей или доступ к этапу. В коде доступны <code>context</code> (поля документа и <code>role_ids</code>), для доступа к этапу — также <code>node_id</code>.
       </p>
       {error && <div className={styles.error}>{error}</div>}
-      <button type="button" className={styles.addBtn} onClick={startAdd}>
+      <button type="button" className={`btnPrimary ${styles.addBtn}`} onClick={startAdd}>
         Добавить валидатор
       </button>
       {validators.length > 0 && (
@@ -192,7 +192,7 @@ export function ProjectValidators() {
               </span>
               <button
                 type="button"
-                className={styles.editBtn}
+                className={`btnSecondary ${styles.editBtn}`}
                 onClick={() => startEdit(i)}
                 aria-label="Редактировать"
               >
@@ -267,10 +267,10 @@ export function ProjectValidators() {
             </div>
           </div>
           <div className={styles.editorActions}>
-            <button type="button" className={styles.saveBtn} onClick={saveEdit} disabled={saving || !editName.trim()}>
+            <button type="button" className={`btnPrimary ${styles.saveBtn}`} onClick={saveEdit} disabled={saving || !editName.trim()}>
               {saving ? "Сохранение…" : "Сохранить"}
             </button>
-            <button type="button" className={styles.cancelBtn} onClick={cancelEdit} disabled={saving}>
+            <button type="button" className={`btnSecondary ${styles.cancelBtn}`} onClick={cancelEdit} disabled={saving}>
               Отмена
             </button>
           </div>

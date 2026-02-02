@@ -12,7 +12,7 @@
   display: inline-block;
   margin-bottom: 1rem;
   background-color: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   font-weight: 500;
@@ -20,7 +20,7 @@
 
 .createLink:hover {
   background-color: var(--color-accent-hover);
-  color: #fff;
+  color: var(--color-on-accent);
   text-decoration: none;
 }
 

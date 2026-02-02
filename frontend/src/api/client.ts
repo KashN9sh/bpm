@@ -79,9 +79,10 @@ function requireFormId(id: string | undefined): asserts id is string {
 
 export const forms = {
   list: () => api<FormResponse[]>("/api/forms"),
-  get: (id: string) => {
+  get: (id: string, projectId?: string) => {
     requireFormId(id);
-    return api<FormResponse>(`/api/forms/${id}`);
+    const url = projectId ? `/api/forms/${id}?project_id=${encodeURIComponent(projectId)}` : `/api/forms/${id}`;
+    return api<FormResponse>(url);
   },
   create: (body: FormCreate) =>
     api<FormResponse>("/api/forms", {

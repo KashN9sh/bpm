@@ -56,7 +56,7 @@
 
 .list button {
   background-color: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);

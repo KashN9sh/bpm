@@ -34,27 +34,18 @@
   gap: 1rem;
 }
 
-.card {
+.cardLink {
   display: block;
-  background-color: var(--color-surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  padding: 1.25rem;
-  border: 1px solid var(--color-border);
   transition: border-color 0.15s, box-shadow 0.15s;
   text-decoration: none;
   color: inherit;
 }
 
-.card:hover {
+.cardLink:hover {
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
   text-decoration: none;
   color: inherit;
-}
-
-.cardWithStrip {
-  border-left: 4px solid var(--color-card-strip);
 }
 
 .cardTitle {
@@ -64,7 +55,7 @@
   color: var(--color-text);
 }
 
-.card:hover .cardTitle {
+.cardLink:hover .cardTitle {
   color: var(--color-accent);
 }
 

@@ -33,7 +33,7 @@
 .form button {
   margin-top: 0.5rem;
   background-color: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   border: none;
   padding: 0.5rem 1rem;
 }
@@ -64,7 +64,7 @@
 }
 
 .error {
-  background-color: #fef2f2;
+  background-color: var(--color-error-tint);
   color: var(--color-error);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);

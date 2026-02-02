@@ -73,7 +73,7 @@ export function FormConstructor() {
     }
     setLoading(true);
     forms
-      .get(formId)
+      .get(formId, projectId || undefined)
       .then((f) => {
         setName(f.name);
         setDescription(f.description);
@@ -82,6 +82,7 @@ export function FormConstructor() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [formId, isNew]);
+
 
   const updateField = useCallback((index: number, patch: Partial<FieldSchema>) => {
     setFields((prev) =>
@@ -289,15 +290,15 @@ export function FormConstructor() {
         <div className={styles.topBarActions}>
           <button
             type="button"
-            className={previewMode ? styles.backBtn : styles.previewBtnActive}
+            className={previewMode ? `btnSecondary ${styles.backBtn}` : `btnTertiary ${styles.previewBtnActive}`}
             onClick={() => setPreviewMode(!previewMode)}
           >
             {previewMode ? "Конструктор" : "Предпросмотр"}
           </button>
-          <button type="button" className={styles.saveBtn} onClick={save} disabled={saving}>
+          <button type="button" className={`btnPrimary ${styles.saveBtn}`} onClick={save} disabled={saving}>
             {saving ? "Сохранение…" : "Сохранить"}
           </button>
-          <button type="button" className={styles.backBtn} onClick={() => navigate("/projects")}>
+          <button type="button" className={`btnSecondary ${styles.backBtn}`} onClick={() => navigate("/projects")}>
             К списку
           </button>
         </div>

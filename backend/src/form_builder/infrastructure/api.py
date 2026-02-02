@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from src.database import get_session
 from src.form_builder.application.form_service import FormService
 from src.form_builder.infrastructure.repository import FormDefinitionRepository
+from src.projects.infrastructure.repository import ProjectRepository
 from src.identity.domain import User
 from src.identity.infrastructure.deps import require_admin
 
@@ -49,10 +50,12 @@ class FormResponse(BaseModel):
     fields: list[dict]
 
 
-def _form_to_response(form) -> FormResponse:
+def _form_to_response(form, project_fields_map: dict[str, dict] | None = None) -> FormResponse:
+    """project_fields_map: словарь {field_key: project_field_dict} для синхронизации типов полей"""
     fields = []
     for f in form.fields:
-        fields.append({
+        # Если есть проект и поле существует в проекте, синхронизируем тип поля
+        field_data = {
             "name": f.name,
             "label": f.label,
             "field_type": f.field_type.value,
@@ -65,7 +68,18 @@ def _form_to_response(form) -> FormResponse:
                 for r in (f.access_rules or [])
             ],
             "width": f.width,
-        })
+        }
+        
+        if project_fields_map and f.name in project_fields_map:
+            project_field = project_fields_map[f.name]
+            # Обновляем тип поля, опции и catalog_id из проекта
+            field_data["field_type"] = project_field["field_type"]
+            if project_field.get("options") is not None:
+                field_data["options"] = project_field["options"]
+            if project_field.get("catalog_id") is not None:
+                field_data["catalog_id"] = project_field["catalog_id"]
+        
+        fields.append(field_data)
     return FormResponse(
         id=str(form.id),
         name=form.name,
@@ -80,6 +94,10 @@ def get_form_repo(session=Depends(get_session)) -> FormDefinitionRepository:
 
 def get_form_service(repo: FormDefinitionRepository = Depends(get_form_repo)) -> FormService:
     return FormService(repo)
+
+
+def get_project_repo(session=Depends(get_session)) -> ProjectRepository:
+    return ProjectRepository(session)
 
 
 @router.post("", response_model=FormResponse)
@@ -105,13 +123,27 @@ async def list_forms(
 @router.get("/{form_id}", response_model=FormResponse)
 async def get_form(
     form_id: UUID,
+    project_id: UUID | None = Query(None, description="Опциональный ID проекта для синхронизации типов полей"),
     _admin: User = Depends(require_admin),
     service: FormService = Depends(get_form_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
 ):
     form = await service.get_form(form_id)
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
-    return _form_to_response(form)
+    
+    project_fields_map = None
+    if project_id:
+        project = await project_repo.get_by_id(project_id)
+        if project:
+            # Создаем словарь полей проекта для быстрого поиска
+            project_fields_map = {pf.key: {
+                "field_type": pf.field_type,
+                "options": pf.options,
+                "catalog_id": pf.catalog_id,
+            } for pf in project.fields}
+    
+    return _form_to_response(form, project_fields_map)
 
 
 @router.patch("/{form_id}", response_model=FormResponse)

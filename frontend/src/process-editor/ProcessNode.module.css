@@ -1,10 +1,10 @@
 .node {
   padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 2px solid #555;
   min-width: 100px;
   text-align: center;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .node.start {
@@ -35,14 +35,14 @@
 }
 
 .node.selected {
-  box-shadow: 0 0 0 1px var(--color-accent, #2563eb);
-  border-color: var(--color-accent, #2563eb);
+  box-shadow: 0 0 0 1px var(--color-accent);
+  border-color: var(--color-accent);
   z-index: 1;
 }
 
 .typeLabel {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   margin-bottom: 0.2rem;
 }

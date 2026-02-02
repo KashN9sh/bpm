@@ -18,7 +18,7 @@
   gap: 1rem;
   padding: 0.75rem 1.25rem;
   margin-bottom: 1rem;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: var(--radius);
 }
 
@@ -41,17 +41,7 @@
 }
 
 .navbarActions button {
-  background-color: var(--color-accent);
-  color: #fff;
-  border: none;
-  padding: 0.5rem 1.25rem;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
-.navbarActions button:hover:not(:disabled) {
-  background-color: var(--color-accent-hover);
+  /* оформление из .btnPrimary в design.css */
 }
 
 .navbarActions button:disabled {
@@ -66,7 +56,7 @@
   width: 100%;
   max-width: 100%;
   padding: 1.5rem 2rem;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: var(--radius);
 }
 
@@ -110,16 +100,16 @@
 .previewField textarea:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .previewField input:read-only,
 .previewField textarea:read-only {
-  background: var(--color-surface-muted, #f5f5f5);
+  background: var(--color-surface-muted);
 }
 
 .error {
-  background-color: #fef2f2;
+  background-color: var(--color-error-tint);
   color: var(--color-error);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
@@ -128,26 +118,9 @@
 }
 
 .completedCard {
-  background-color: var(--color-surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
-  padding: 2rem;
   max-width: 400px;
 }
 
 .completedCard h1 {
   margin-bottom: 1rem;
-}
-
-.completedCard button {
-  background-color: var(--color-accent);
-  color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-}
-
-.completedCard button:hover {
-  background-color: var(--color-accent-hover);
 }

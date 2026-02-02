@@ -13,7 +13,7 @@
   margin-bottom: 1rem;
   padding: 0.5rem 1rem;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   text-decoration: none;
   border-radius: var(--radius-sm);
   font-weight: 500;

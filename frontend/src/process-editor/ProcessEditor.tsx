@@ -308,11 +308,12 @@ export function ProcessEditor() {
           />
         </div>
         <div className={styles.actions}>
-          <button type="button" onClick={save} disabled={saving}>
+          <button type="button" className="btnTertiary" onClick={save} disabled={saving}>
             {saving ? "Сохранение…" : "Сохранить"}
           </button>
           <button
             type="button"
+            className="btnTertiary"
             onClick={() => {
               const pid = projectIdFromContext || projectId;
               navigate(pid ? `/projects/${pid}/processes` : "/projects");

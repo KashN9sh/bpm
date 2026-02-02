@@ -34,7 +34,7 @@ export function Login() {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.card}>
+      <div className={`card ${styles.cardForm}`}>
         <h1 className={styles.title}>Вход</h1>
         {error && <div className={styles.error}>{error}</div>}
         <form onSubmit={submit} className={styles.form}>
@@ -58,7 +58,7 @@ export function Login() {
               autoComplete="current-password"
             />
           </label>
-          <button type="submit" disabled={loading}>
+          <button type="submit" className="btnPrimary" disabled={loading}>
             {loading ? "Вход…" : "Войти"}
           </button>
         </form>

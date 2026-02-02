@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { runtime, type CurrentFormResponse } from "../api/client";
+import { AppSelect } from "../components/Select";
 import styles from "./RuntimeForm.module.css";
 
 export function RuntimeForm() {
@@ -20,6 +21,7 @@ export function RuntimeForm() {
     runtime
       .getCurrentForm(instanceId)
       .then((res) => {
+        console.log("Form fields:", res.form_definition.fields.map(f => ({ name: f.name, type: f.field_type })));
         setState(res);
         setFormData(res.submission_data ?? {});
       })
@@ -77,9 +79,9 @@ export function RuntimeForm() {
   if (state === "completed") {
     return (
       <div className={styles.wrap}>
-        <div className={styles.completedCard}>
+        <div className={`card ${styles.completedCard}`}>
           <h1>Процесс завершён</h1>
-          <button type="button" onClick={() => navigate("/documents")}>
+          <button type="button" className="btnPrimary" onClick={() => navigate("/documents")}>
             К списку документов
           </button>
         </div>
@@ -97,6 +99,7 @@ export function RuntimeForm() {
         <div className={styles.navbarActions}>
           <button
             type="button"
+            className="btnPrimary"
             disabled={submitting || saving}
             onClick={handleSave}
           >
@@ -106,6 +109,7 @@ export function RuntimeForm() {
             <button
               key={t.edge_id}
               type="button"
+              className="btnPrimary"
               disabled={submitting || saving}
               onClick={(e) => handleSubmit(e, t.key)}
             >
@@ -119,13 +123,20 @@ export function RuntimeForm() {
           <p className={styles.previewDesc}>{form_definition.description}</p>
         )}
         <form onSubmit={handleSave} className={styles.previewForm}>
-          {form_definition.fields.map((field) => (
+          {form_definition.fields.map((field) => {
+            if (field.field_type === "select" || field.field_type === "multiselect") {
+              console.log("Field:", field.name, "type:", field.field_type, "options:", field.options);
+            }
+            return (
             <label
               key={field.name}
               className={styles.previewField}
               style={{ gridColumn: `span ${field.width ?? 12}` }}
             >
-              <span>{field.label || field.name}</span>
+              <span>
+                {field.label || field.name}
+                {field.required && <span style={{ color: "var(--color-error)", marginLeft: "0.25rem" }}>*</span>}
+              </span>
               {field.field_type === "textarea" ? (
                 <textarea
                   value={(formData[field.name] as string) ?? ""}
@@ -151,20 +162,24 @@ export function RuntimeForm() {
                   required={field.required}
                   readOnly={field.read_only}
                 />
-              ) : field.field_type === "select" ? (
-                <select
-                  value={(formData[field.name] as string) ?? ""}
-                  onChange={(e) => updateField(field.name, e.target.value)}
-                  required={field.required}
-                  disabled={field.read_only}
-                >
-                  <option value="">— Выберите —</option>
-                  {(field.options ?? []).map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label ?? opt.value}
-                    </option>
-                  ))}
-                </select>
+              ) : field.field_type === "select" || field.field_type === "multiselect" ? (
+                (() => {
+                  const isMultiSelect = field.field_type === "multiselect";
+                  if (field.field_type === "select" || field.field_type === "multiselect") {
+                    console.log("Field type:", field.field_type, "isMulti:", isMultiSelect);
+                  }
+                  return (
+                    <AppSelect
+                      value={isMultiSelect ? ((formData[field.name] as string[] | undefined) ?? []) : ((formData[field.name] as string | undefined) ?? "")}
+                      onChange={(value) => updateField(field.name, value)}
+                      options={(field.options ?? []).map((opt) => ({ value: opt.value, label: opt.label ?? opt.value }))}
+                      placeholder="— Выберите —"
+                      isMulti={isMultiSelect}
+                      isDisabled={field.read_only}
+                      isRequired={field.required}
+                    />
+                  );
+                })()
               ) : (
                 <input
                   type={field.field_type === "date" || field.field_type === "datetime" ? field.field_type : "text"}
@@ -175,7 +190,8 @@ export function RuntimeForm() {
                 />
               )}
             </label>
-          ))}
+            );
+          })}
         </form>
       </div>
     </div>
