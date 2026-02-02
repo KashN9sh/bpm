@@ -1,6 +1,8 @@
 .wrap {
   padding: 1.5rem;
   max-width: 640px;
+  background: #fff;
+  border-radius: var(--radius);
 }
 
 .error {
@@ -13,15 +15,19 @@
 }
 
 .form label {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
   margin-bottom: 1rem;
 }
 
-.form input {
+.form input,
+.form select {
   width: 100%;
   max-width: 400px;
   padding: 0.5rem;
-  margin-top: 0.25rem;
+  margin-top: 0;
 }
 
 .fieldset {
@@ -29,6 +35,7 @@
   padding: 1rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: var(--color-bg, #f8f9fa);
 }
 
 .fieldset legend {
@@ -144,12 +151,13 @@
   margin-bottom: 0.25rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: #fff;
   cursor: pointer;
 }
 
 .fieldList li.selected {
   border-color: var(--color-accent);
-  background: var(--color-accent-tint);
+  background: #fff;
 }
 
 .fieldName {
@@ -169,19 +177,55 @@
   color: var(--color-error);
 }
 
-.fieldForm {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
+.fieldList li.fieldFormLi {
+  display: block;
+  align-items: stretch;
+  justify-content: flex-start;
+  margin: 0.25rem 0 0.5rem 0;
+  padding: 1rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: default;
+  animation: fieldFormOpen 0.25s ease forwards;
 }
 
-.fieldForm label {
-  display: block;
+@keyframes fieldFormOpen {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fieldList li.fieldFormLi.fieldFormLiClosing {
+  animation: fieldFormClose 0.2s ease forwards;
+}
+
+@keyframes fieldFormClose {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.fieldFormLi label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
   margin-bottom: 0.75rem;
 }
 
-.fieldForm input,
-.fieldForm select {
+.fieldFormLi input,
+.fieldFormLi select {
   width: 100%;
   max-width: 400px;
   padding: 0.5rem;

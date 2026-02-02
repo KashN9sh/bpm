@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   projects,
@@ -27,6 +27,7 @@ export function ProjectEditor() {
   const [listColumns, setListColumns] = useState<string[]>(["process_name", "status"]);
   const [fields, setFields] = useState<ProjectFieldSchema[]>([]);
   const [selectedFieldIndex, setSelectedFieldIndex] = useState<number | null>(null);
+  const [closingFieldIndex, setClosingFieldIndex] = useState<number | null>(null);
   const [catalogList, setCatalogList] = useState<CatalogResponse[]>([]);
   const [draggedColumnIndex, setDraggedColumnIndex] = useState<number | null>(null);
   const [dragOverColumnIndex, setDragOverColumnIndex] = useState<number | null>(null);
@@ -175,93 +176,108 @@ export function ProjectEditor() {
           </button>
           <ul className={styles.fieldList}>
             {fields.map((f, i) => (
-              <li
-                key={i}
-                className={selectedFieldIndex === i ? styles.selected : ""}
-                onClick={() => setSelectedFieldIndex(i)}
-              >
-                <span className={styles.fieldName}>
-                  {f.key || `Поле ${i + 1}`} ({f.field_type})
-                </span>
-                <button
-                  type="button"
-                  className={styles.removeBtn}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeProjectField(i);
+              <Fragment key={i}>
+                <li
+                  className={selectedFieldIndex === i && closingFieldIndex === null ? styles.selected : ""}
+                  onClick={() => {
+                    if (selectedFieldIndex === i) {
+                      if (closingFieldIndex === null) setClosingFieldIndex(i);
+                    } else {
+                      setSelectedFieldIndex(i);
+                    }
                   }}
-                  aria-label="Удалить"
                 >
-                  ×
-                </button>
-              </li>
+                  <span className={styles.fieldName}>
+                    {f.key || `Поле ${i + 1}`} ({f.field_type})
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.removeBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeProjectField(i);
+                    }}
+                    aria-label="Удалить"
+                  >
+                    ×
+                  </button>
+                </li>
+                {(selectedFieldIndex === i || closingFieldIndex === i) && (
+                  <li
+                    className={`${styles.fieldFormLi} ${closingFieldIndex === i ? styles.fieldFormLiClosing : ""}`}
+                    onAnimationEnd={(e) => {
+                      if (closingFieldIndex === i && e.animationName?.includes("fieldFormClose")) {
+                        setClosingFieldIndex(null);
+                        setSelectedFieldIndex(null);
+                      }
+                    }}
+                  >
+                    <label>
+                      Ключ (key)
+                      <input
+                        value={fields[i].key}
+                        onChange={(e) =>
+                          updateProjectField(i, {
+                            key: e.target.value.replace(/\s/g, "_"),
+                          })
+                        }
+                        placeholder="field_name"
+                      />
+                    </label>
+                    <label>
+                      Подпись
+                      <input
+                        value={fields[i].label}
+                        onChange={(e) =>
+                          updateProjectField(i, { label: e.target.value })
+                        }
+                        placeholder="Подпись"
+                      />
+                    </label>
+                    <label>
+                      Тип
+                      <select
+                        value={fields[i].field_type}
+                        onChange={(e) =>
+                          updateProjectField(i, {
+                            field_type: e.target.value,
+                          })
+                        }
+                      >
+                        {PROJECT_FIELD_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {(fields[i].field_type === "select" ||
+                      fields[i].field_type === "multiselect") && (
+                      <label>
+                        Справочник (варианты выбора)
+                        <select
+                          value={fields[i].catalog_id ?? ""}
+                          onChange={(e) =>
+                            updateProjectField(i, {
+                              catalog_id: e.target.value || null,
+                              options: e.target.value ? null : fields[i].options,
+                            })
+                          }
+                        >
+                          <option value="">— Без справочника (options вручную) —</option>
+                          {catalogList.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                  </li>
+                )}
+              </Fragment>
             ))}
           </ul>
-          {selectedFieldIndex != null && fields[selectedFieldIndex] && (
-            <div className={styles.fieldForm}>
-              <label>
-                Ключ (key)
-                <input
-                  value={fields[selectedFieldIndex].key}
-                  onChange={(e) =>
-                    updateProjectField(selectedFieldIndex, {
-                      key: e.target.value.replace(/\s/g, "_"),
-                    })
-                  }
-                  placeholder="field_name"
-                />
-              </label>
-              <label>
-                Подпись
-                <input
-                  value={fields[selectedFieldIndex].label}
-                  onChange={(e) =>
-                    updateProjectField(selectedFieldIndex, { label: e.target.value })
-                  }
-                  placeholder="Подпись"
-                />
-              </label>
-              <label>
-                Тип
-                <select
-                  value={fields[selectedFieldIndex].field_type}
-                  onChange={(e) =>
-                    updateProjectField(selectedFieldIndex, {
-                      field_type: e.target.value,
-                    })
-                  }
-                >
-                  {PROJECT_FIELD_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {(fields[selectedFieldIndex].field_type === "select" ||
-                fields[selectedFieldIndex].field_type === "multiselect") && (
-                <label>
-                  Справочник (варианты выбора)
-                  <select
-                    value={fields[selectedFieldIndex].catalog_id ?? ""}
-                    onChange={(e) =>
-                      updateProjectField(selectedFieldIndex, {
-                        catalog_id: e.target.value || null,
-                        options: e.target.value ? null : fields[selectedFieldIndex].options,
-                      })
-                    }
-                  >
-                    <option value="">— Без справочника (options вручную) —</option>
-                    {catalogList.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
-          )}
         </fieldset>
 
         <fieldset className={styles.fieldset}>
