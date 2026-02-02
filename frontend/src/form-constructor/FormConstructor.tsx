@@ -10,6 +10,7 @@ import {
   type ProjectFieldSchema,
 } from "../api/client";
 import type { CatalogResponse, ProjectResponse } from "../api/client";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AccessConstructor } from "../access-constructor/AccessConstructor";
 import styles from "./FormConstructor.module.css";
 
@@ -51,7 +52,9 @@ export function FormConstructor() {
   const [canvasDragOver, setCanvasDragOver] = useState(false);
   const [draggingBlockIndex, setDraggingBlockIndex] = useState<number | null>(null);
   const [resizingBlockIndex, setResizingBlockIndex] = useState<number | null>(null);
-  const [previewMode, setPreviewMode] = useState(true);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [paletteCollapsed, setPaletteCollapsed] = useState(true);
+  const [propertiesCollapsed, setPropertiesCollapsed] = useState(true);
   const resizeStartX = useRef(0);
   const resizeStartWidth = useRef(12);
   const canvasFieldsRef = useRef<HTMLDivElement>(null);
@@ -343,38 +346,63 @@ export function FormConstructor() {
           </div>
         </div>
       ) : (
-      <div className={styles.main}>
+      <div
+        className={`${styles.main} ${paletteCollapsed ? styles.paletteCollapsed : ""} ${propertiesCollapsed ? styles.propertiesCollapsed : ""}`}
+      >
         <aside className={styles.palette}>
-          <div className={styles.paletteTitle}>Поля из проекта</div>
-          <div className={styles.paletteList}>
-            {!projectId && (
-              <p className={styles.hintNoProject}>
-                Откройте форму из вкладки «Формы» проекта, чтобы добавлять поля.
-              </p>
-            )}
-            {project && projectFieldsAvailable.length === 0 && projectFields.length > 0 && (
-              <p className={styles.paletteEmpty}>Все поля уже добавлены</p>
-            )}
-            {project && projectFields.length === 0 && (
-              <p className={styles.paletteEmpty}>В настройках проекта нет полей</p>
-            )}
-            {projectFieldsAvailable.map((pf, i) => (
-              <div
-                key={pf.key || i}
-                className={styles.paletteItem}
-                draggable
-                onDragStart={(e) => handlePaletteDragStart(e, pf)}
-                onClick={() => addFieldFromProject(pf)}
-              >
-                <span>{pf.label || pf.key}</span>
-                <span className={styles.paletteItemType}>{fieldTypeLabel(pf.field_type)}</span>
+          {paletteCollapsed ? (
+            <button
+              type="button"
+              className={styles.paletteCollapseStrip}
+              onClick={() => setPaletteCollapsed(false)}
+              title="Развернуть палитру полей"
+            >
+              <ChevronRight size={18} />
+              <span className={styles.paletteCollapseLabel}>Поля</span>
+            </button>
+          ) : (
+            <>
+              <div className={styles.paletteTitle}>
+                <span>Поля из проекта</span>
+                <button
+                  type="button"
+                  className={styles.paletteToggle}
+                  onClick={() => setPaletteCollapsed(true)}
+                  aria-label="Свернуть"
+                >
+                  <ChevronLeft size={16} />
+                </button>
               </div>
-            ))}
-          </div>
+              <div className={styles.paletteList}>
+                {!projectId && (
+                  <p className={styles.hintNoProject}>
+                    Откройте форму из вкладки «Формы» проекта, чтобы добавлять поля.
+                  </p>
+                )}
+                {project && projectFieldsAvailable.length === 0 && projectFields.length > 0 && (
+                  <p className={styles.paletteEmpty}>Все поля уже добавлены</p>
+                )}
+                {project && projectFields.length === 0 && (
+                  <p className={styles.paletteEmpty}>В настройках проекта нет полей</p>
+                )}
+                {projectFieldsAvailable.map((pf, i) => (
+                  <div
+                    key={pf.key || i}
+                    className={styles.paletteItem}
+                    draggable
+                    onDragStart={(e) => handlePaletteDragStart(e, pf)}
+                    onClick={() => addFieldFromProject(pf)}
+                  >
+                    <span>{pf.label || pf.key}</span>
+                    <span className={styles.paletteItemType}>{fieldTypeLabel(pf.field_type)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </aside>
 
         <section className={styles.canvas}>
-          <div className={styles.canvasTitle}>Форма</div>
           <div
             className={styles.canvasScroll}
             onDragOver={handleCanvasDragOver}
@@ -390,7 +418,6 @@ export function FormConstructor() {
                   : "Перетащите поля сюда или нажмите на поле в палитре"}
               </div>
             ) : (
-              <div className={styles.canvasInner}>
                 <div ref={canvasFieldsRef} className={styles.canvasFields}>
                   {fields.map((f, i) => (
                     <div
@@ -401,7 +428,15 @@ export function FormConstructor() {
                         draggingBlockIndex === i ? styles.dragging : ""
                       }`}
                       style={{ gridColumn: `span ${f.width ?? 12}` }}
-                      onClick={() => setSelectedFieldIndex(i)}
+                      onClick={() => {
+                        if (selectedFieldIndex === i) {
+                          setSelectedFieldIndex(null);
+                          setPropertiesCollapsed(true);
+                        } else {
+                          setSelectedFieldIndex(i);
+                          setPropertiesCollapsed(false);
+                        }
+                      }}
                       onDragOver={(e) => handleBlockDragOver(e, i)}
                       onDragLeave={handleBlockDragLeave}
                       onDrop={(e) => handleBlockDrop(e, i)}
@@ -444,65 +479,97 @@ export function FormConstructor() {
                     </div>
                   ))}
                 </div>
-              </div>
             )}
           </div>
         </section>
 
         <aside className={styles.properties}>
-          <div className={styles.propertiesTitle}>Свойства</div>
-          <div className={styles.propertiesScroll}>
-            {!selectedField ? (
-              <p className={styles.propertiesEmpty}>
-                Выберите поле на холсте, чтобы изменить свойства
-              </p>
-            ) : (
-              <>
-                <div className={styles.propertiesSection}>
-                  <h3>Поле</h3>
-                  <p className={styles.fieldReadOnly}>
-                    Ключ: <strong>{selectedField.name}</strong> · Тип: {fieldTypeLabel(selectedField.field_type)}
-                    {selectedField.catalog_id &&
-                      ` · Справочник: ${catalogList.find((c) => c.id === selectedField.catalog_id)?.name ?? selectedField.catalog_id}`}
+          {propertiesCollapsed ? (
+            <button
+              type="button"
+              className={styles.propertiesCollapseStrip}
+              onClick={() => setPropertiesCollapsed(false)}
+              title="Развернуть свойства"
+            >
+              <ChevronLeft size={18} />
+              <span className={styles.propertiesCollapseLabel}>Свойства</span>
+            </button>
+          ) : (
+            <>
+              <div className={styles.propertiesTitle}>
+                <span>Свойства</span>
+                <button
+                  type="button"
+                  className={styles.propertiesToggle}
+                  onClick={() => setPropertiesCollapsed(true)}
+                  aria-label="Свернуть"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+              <div className={styles.propertiesScroll}>
+                {!selectedField ? (
+                  <p className={styles.propertiesEmpty}>
+                    Выберите поле на холсте, чтобы изменить свойства
                   </p>
-                  <label className={styles.checkLabel}>
-                    <input
-                      type="checkbox"
-                      checked={selectedField.required}
-                      onChange={(e) =>
-                        updateField(selectedFieldIndex!, { required: e.target.checked })
-                      }
-                    />
-                    Обязательное
-                  </label>
-                  <div className={styles.widthControl}>
-                    <span className={styles.widthLabel}>Ширина (колонок из 12):</span>
-                    <div className={styles.widthButtons}>
-                      {([12, 6, 4, 3] as const).map((w) => (
-                        <button
-                          key={w}
-                          type="button"
-                          className={`${styles.widthBtn} ${(selectedField.width ?? 12) === w ? styles.widthBtnActive : ""}`}
-                          onClick={() => updateField(selectedFieldIndex!, { width: w })}
-                          title={w === 12 ? "Вся строка" : w === 6 ? "Половина" : w === 4 ? "Треть" : "Четверть"}
-                        >
-                          {w === 12 ? "100%" : w === 6 ? "½" : w === 4 ? "⅓" : "¼"}
-                        </button>
-                      ))}
+                ) : (
+                  <>
+                    <div className={styles.propertiesSection}>
+                      <h3>Поле</h3>
+                      <p className={styles.fieldReadOnly}>
+                        Ключ: <strong>{selectedField.name}</strong> · Тип: {fieldTypeLabel(selectedField.field_type)}
+                        {selectedField.catalog_id &&
+                          ` · Справочник: ${catalogList.find((c) => c.id === selectedField.catalog_id)?.name ?? selectedField.catalog_id}`}
+                      </p>
+                      <label className={styles.checkLabel}>
+                        <input
+                          type="checkbox"
+                          checked={selectedField.required}
+                          onChange={(e) =>
+                            updateField(selectedFieldIndex!, { required: e.target.checked })
+                          }
+                        />
+                        Обязательное
+                      </label>
+                      <div className={styles.widthControl}>
+                        <span className={styles.widthLabel}>Ширина (колонок из 12):</span>
+                        <div className={styles.widthButtons}>
+                          {([12, 6, 4, 3] as const).map((w) => (
+                            <button
+                              key={w}
+                              type="button"
+                              className={`${styles.widthBtn} ${(selectedField.width ?? 12) === w ? styles.widthBtnActive : ""}`}
+                              onClick={() => updateField(selectedFieldIndex!, { width: w })}
+                              title={w === 12 ? "Вся строка" : w === 6 ? "Половина" : w === 4 ? "Треть" : "Четверть"}
+                            >
+                              {w === 12 ? "100%" : w === 6 ? "½" : w === 4 ? "⅓" : "¼"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className={styles.propertiesSection}>
-                  <h3>Правила доступа</h3>
-                  <AccessConstructor
-                    rules={selectedField.access_rules || []}
-                    roles={roles}
-                    onChange={(rules) => updateAccessRules(selectedFieldIndex!, rules)}
-                  />
-                </div>
-              </>
-            )}
-          </div>
+                    <div className={styles.propertiesSection}>
+                      <h3>Правила доступа</h3>
+                      <AccessConstructor
+                        rules={selectedField.access_rules || []}
+                        roles={roles}
+                        onChange={(rules) => updateAccessRules(selectedFieldIndex!, rules)}
+                      />
+                    </div>
+                    <div className={styles.propertiesFooter}>
+                      <button
+                        type="button"
+                        className={styles.propertiesOkBtn}
+                        onClick={() => setPropertiesCollapsed(true)}
+                      >
+                        ОК
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </aside>
       </div>
       )}
