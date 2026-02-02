@@ -54,6 +54,15 @@ def _serialize_fields(fields: list[ProjectField]) -> str:
     return json.dumps(arr)
 
 
+def _validator_key_from_item(item: dict, index: int) -> str:
+    """Системное имя: из key или из name (slug) или индекс."""
+    if isinstance(item.get("key"), str) and item["key"].strip():
+        return item["key"].strip()
+    name = (item.get("name") or "validator").strip() or "validator"
+    slug = "".join(c if c.isalnum() or c in "_-" else "_" for c in name).strip("_") or "validator"
+    return slug.lower() if slug else f"validator_{index}"
+
+
 def _parse_validators_schema(raw: str | None) -> list[Validator]:
     if not raw:
         return []
@@ -62,9 +71,11 @@ def _parse_validators_schema(raw: str | None) -> list[Validator]:
         if not isinstance(parsed, list):
             return []
         out = []
-        for item in parsed:
+        for i, item in enumerate(parsed):
             if isinstance(item, dict) and "name" in item and "type" in item and "code" in item:
+                key = _validator_key_from_item(item, i)
                 out.append(Validator(
+                    key=key,
                     name=str(item["name"]),
                     type=str(item["type"]),
                     code=str(item["code"]),
@@ -75,7 +86,7 @@ def _parse_validators_schema(raw: str | None) -> list[Validator]:
 
 
 def _serialize_validators(validators: list[Validator]) -> str:
-    arr = [{"name": v.name, "type": v.type, "code": v.code} for v in validators]
+    arr = [{"key": v.key, "name": v.name, "type": v.type, "code": v.code} for v in validators]
     return json.dumps(arr)
 
 

@@ -6,6 +6,7 @@ from typing import Any
 @dataclass
 class Validator:
     """Валидатор проекта: скрытие полей или доступ к этапу. Выполняется в песочнице Python."""
+    key: str  # системное имя (уникальное в рамках проекта)
     name: str
     type: str  # "field_visibility" | "step_access"
     code: str

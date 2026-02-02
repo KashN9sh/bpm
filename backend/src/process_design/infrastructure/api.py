@@ -20,14 +20,17 @@ class NodeSchema(BaseModel):
     position_x: float = 0.0
     position_y: float = 0.0
     expression: str | None = None
+    validator_keys: list[str] = []  # ключи валидаторов проекта (видимость полей)
 
 
 class EdgeSchema(BaseModel):
     id: str
     source_node_id: str
     target_node_id: str
-    label: str = ""
+    key: str = ""  # системное имя (для логирования)
+    label: str = ""  # название перехода
     condition_expression: str | None = None
+    transition_validator_keys: list[str] = []  # ключи валидаторов проекта (доступ к этапу)
 
 
 class ProcessCreate(BaseModel):
@@ -66,6 +69,7 @@ def _process_to_response(p) -> ProcessResponse:
             "position_x": n.position_x,
             "position_y": n.position_y,
             "expression": n.expression,
+            "validator_keys": getattr(n, "validator_keys", None) or [],
         }
         for n in p.nodes
     ]
@@ -74,8 +78,10 @@ def _process_to_response(p) -> ProcessResponse:
             "id": e.id,
             "source_node_id": e.source_node_id,
             "target_node_id": e.target_node_id,
+            "key": getattr(e, "key", None) or "",
             "label": e.label,
             "condition_expression": e.condition_expression,
+            "transition_validator_keys": getattr(e, "transition_validator_keys", None) or [],
         }
         for e in p.edges
     ]

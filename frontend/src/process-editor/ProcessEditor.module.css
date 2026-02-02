@@ -67,6 +67,14 @@
   min-height: 300px;
 }
 
+/* Подсветка выбранного ребра и стрелки одним цветом */
+.flowWrap :global(.react-flow__edge.selected path) {
+  stroke: var(--color-accent) !important;
+}
+.flowWrap :global(.react-flow__edge.selected marker path) {
+  fill: var(--color-accent) !important;
+}
+
 .addNodes {
   display: flex;
   gap: 0.25rem;
@@ -104,4 +112,183 @@
   width: 100%;
   padding: 0.4rem;
   margin-top: 0.25rem;
+}
+
+.validatorsSection {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.validatorsTitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.validatorsHint {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.validatorsList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.validatorItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.validatorKey {
+  font-family: ui-monospace, monospace;
+  color: var(--color-text-muted);
+  min-width: 4rem;
+}
+
+.validatorName {
+  font-weight: 500;
+  min-width: 0;
+}
+
+.validatorType {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.validatorEditBtn,
+.validatorRemoveBtn {
+  margin-left: auto;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.validatorRemoveBtn {
+  border: none;
+  color: var(--color-text-muted);
+}
+
+.addValidatorWrap {
+  position: relative;
+}
+
+.addValidatorBtn {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.addValidatorBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.validatorPickerList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.validatorPickerItem {
+  display: block;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.validatorPickerItem:hover {
+  background: var(--color-border);
+}
+
+.validatorPickerKey {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.validatorsEmpty {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.validatorEditor {
+  margin-top: 0.5rem;
+}
+
+.validatorLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.validatorInput,
+.validatorSelect {
+  padding: 0.35rem;
+  font-size: 0.8125rem;
+}
+
+.validatorCode {
+  width: 100%;
+  min-height: 100px;
+  padding: 0.35rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  resize: vertical;
+}
+
+.validatorEditorActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.validatorSaveBtn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8125rem;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.validatorCancelBtn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8125rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }

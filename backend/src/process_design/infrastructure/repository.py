@@ -8,6 +8,17 @@ from src.process_design.domain import ProcessDefinition, Node, Edge, NodeType
 from src.process_design.infrastructure.models import ProcessDefinitionModel
 
 
+def _validator_keys_from_node_dict(d: dict) -> list[str]:
+    """Ключи валидаторов: из validator_keys или из старого формата validators (список объектов с key)."""
+    keys = d.get("validator_keys")
+    if isinstance(keys, list):
+        return [str(k).strip() for k in keys if k]
+    old = d.get("validators") or []
+    if isinstance(old, list):
+        return [str(v.get("key", v.get("name", ""))).strip() for v in old if isinstance(v, dict) and (v.get("key") or v.get("name"))]
+    return []
+
+
 def _serialize_node(n: Node) -> dict:
     return {
         "id": n.id,
@@ -17,6 +28,7 @@ def _serialize_node(n: Node) -> dict:
         "position_x": n.position_x,
         "position_y": n.position_y,
         "expression": n.expression,
+        "validator_keys": getattr(n, "validator_keys", None) or [],
     }
 
 
@@ -29,7 +41,23 @@ def _deserialize_node(d: dict) -> Node:
         position_x=float(d.get("position_x", 0)),
         position_y=float(d.get("position_y", 0)),
         expression=d.get("expression"),
+        validator_keys=_validator_keys_from_node_dict(d),
     )
+
+
+def _transition_validator_keys_from_edge_dict(d: dict) -> list[str]:
+    keys = d.get("transition_validator_keys")
+    if isinstance(keys, list):
+        return [str(k).strip() for k in keys if k]
+    return []
+
+
+def _edge_key_from_dict(d: dict) -> str:
+    """Системное имя ребра: из key или из id для обратной совместимости."""
+    k = d.get("key")
+    if isinstance(k, str) and k.strip():
+        return k.strip()
+    return d.get("id", "") or ""
 
 
 def _serialize_edge(e: Edge) -> dict:
@@ -37,8 +65,10 @@ def _serialize_edge(e: Edge) -> dict:
         "id": e.id,
         "source_node_id": e.source_node_id,
         "target_node_id": e.target_node_id,
+        "key": getattr(e, "key", None) or "",
         "label": e.label,
         "condition_expression": e.condition_expression,
+        "transition_validator_keys": getattr(e, "transition_validator_keys", None) or [],
     }
 
 
@@ -47,8 +77,10 @@ def _deserialize_edge(d: dict) -> Edge:
         id=d["id"],
         source_node_id=d["source_node_id"],
         target_node_id=d["target_node_id"],
+        key=_edge_key_from_dict(d),
         label=d.get("label", ""),
         condition_expression=d.get("condition_expression"),
+        transition_validator_keys=_transition_validator_keys_from_edge_dict(d),
     )
 
 

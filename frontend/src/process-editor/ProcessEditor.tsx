@@ -7,6 +7,7 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
+  MarkerType,
   type Connection,
   type Edge,
   type Node,
@@ -18,9 +19,11 @@ import "@xyflow/react/dist/style.css";
 import {
   processes,
   forms,
+  projects,
   type ProcessNodeSchema,
   type ProcessEdgeSchema,
   type FormResponse,
+  type ProjectResponse,
 } from "../api/client";
 import { ProcessNode } from "./ProcessNode";
 import styles from "./ProcessEditor.module.css";
@@ -43,17 +46,9 @@ function toFlowNodes(nodes: ProcessNodeSchema[]): Node[] {
       form_definition_id: n.form_definition_id ?? undefined,
       expression: n.expression ?? undefined,
       nodeType: n.node_type,
+      validator_keys: n.validator_keys ?? [],
     },
     position: { x: n.position_x, y: n.position_y },
-  }));
-}
-
-function toFlowEdges(edges: ProcessEdgeSchema[]): Edge[] {
-  return edges.map((e) => ({
-    id: e.id,
-    source: e.source_node_id,
-    target: e.target_node_id,
-    data: { label: e.label, condition_expression: e.condition_expression },
   }));
 }
 
@@ -66,6 +61,22 @@ function fromFlowNodes(nodes: Node[]): ProcessNodeSchema[] {
     position_x: n.position?.x ?? 0,
     position_y: n.position?.y ?? 0,
     expression: (n.data as { expression?: string })?.expression ?? null,
+    validator_keys: (n.data as { validator_keys?: string[] })?.validator_keys ?? [],
+  }));
+}
+
+function toFlowEdges(edges: ProcessEdgeSchema[]): Edge[] {
+  return edges.map((e) => ({
+    id: e.id,
+    source: e.source_node_id,
+    target: e.target_node_id,
+    markerEnd: { type: MarkerType.ArrowClosed },
+    data: {
+      key: e.key ?? "",
+      label: e.label ?? "",
+      condition_expression: e.condition_expression ?? undefined,
+      transition_validator_keys: e.transition_validator_keys ?? [],
+    },
   }));
 }
 
@@ -74,8 +85,10 @@ function fromFlowEdges(edges: Edge[]): ProcessEdgeSchema[] {
     id: e.id || `e-${i}`,
     source_node_id: e.source,
     target_node_id: e.target,
+    key: (e.data as { key?: string })?.key ?? "",
     label: (e.data as { label?: string })?.label ?? "",
     condition_expression: (e.data as { condition_expression?: string })?.condition_expression ?? null,
+    transition_validator_keys: (e.data as { transition_validator_keys?: string[] })?.transition_validator_keys ?? [],
   }));
 }
 
@@ -99,10 +112,22 @@ export function ProcessEditor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [project, setProject] = useState<ProjectResponse | null>(null);
+  const [validatorPickerOpen, setValidatorPickerOpen] = useState(false);
+  const [edgeValidatorPickerOpen, setEdgeValidatorPickerOpen] = useState(false);
 
   useEffect(() => {
     forms.list().then(setFormList).catch(() => setFormList([]));
   }, []);
+
+  useEffect(() => {
+    if (!projectId) {
+      setProject(null);
+      return;
+    }
+    projects.get(projectId).then(setProject).catch(() => setProject(null));
+  }, [projectId]);
 
   useEffect(() => {
     if (isNew) {
@@ -119,6 +144,7 @@ export function ProcessEditor() {
       ]);
       setEdges([]);
       setSelectedNodeId(null);
+      setSelectedEdgeId(null);
       return;
     }
     setLoading(true);
@@ -181,21 +207,86 @@ export function ProcessEditor() {
   };
 
   const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null;
+  const nodeValidatorKeys = (selectedNode?.data as { validator_keys?: string[] })?.validator_keys ?? [];
+  const selectedEdge = selectedEdgeId ? edges.find((e) => e.id === selectedEdgeId) : null;
+  const edgeTransitionValidatorKeys = (selectedEdge?.data as { transition_validator_keys?: string[] })?.transition_validator_keys ?? [];
+
+  const updateNodeValidatorKeys = useCallback(
+    (keys: string[]) => {
+      if (!selectedNodeId) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === selectedNodeId ? { ...n, data: { ...n.data, validator_keys: keys } } : n
+        )
+      );
+    },
+    [selectedNodeId, setNodes]
+  );
+
+  const projectVisibilityValidators = (project?.validators ?? []).filter(
+    (v) => v.type === "field_visibility"
+  );
+  const availableToAdd = projectVisibilityValidators.filter(
+    (v) => !nodeValidatorKeys.includes(v.key || v.name)
+  );
+
+  const addValidatorKey = (key: string) => {
+    if (!nodeValidatorKeys.includes(key)) updateNodeValidatorKeys([...nodeValidatorKeys, key]);
+    setValidatorPickerOpen(false);
+  };
+
+  const removeValidatorKey = (key: string) => {
+    updateNodeValidatorKeys(nodeValidatorKeys.filter((k) => k !== key));
+  };
+
+  const updateEdgeTransitionValidatorKeys = useCallback(
+    (keys: string[]) => {
+      if (!selectedEdgeId) return;
+      setEdges((eds) =>
+        eds.map((e) =>
+          e.id === selectedEdgeId ? { ...e, data: { ...e.data, transition_validator_keys: keys } } : e
+        )
+      );
+    },
+    [selectedEdgeId, setEdges]
+  );
+
+  const projectStepAccessValidators = (project?.validators ?? []).filter(
+    (v) => v.type === "step_access"
+  );
+  const availableEdgeTransitionToAdd = projectStepAccessValidators.filter(
+    (v) => !edgeTransitionValidatorKeys.includes(v.key || v.name)
+  );
+
+  const addEdgeTransitionValidatorKey = (key: string) => {
+    if (!edgeTransitionValidatorKeys.includes(key)) updateEdgeTransitionValidatorKeys([...edgeTransitionValidatorKeys, key]);
+    setEdgeValidatorPickerOpen(false);
+  };
+
+  const removeEdgeTransitionValidatorKey = (key: string) => {
+    updateEdgeTransitionValidatorKeys(edgeTransitionValidatorKeys.filter((k) => k !== key));
+  };
 
   const addNode = (nodeType: "step" | "gateway" | "end") => {
     const id = `${nodeType}-${Date.now()}`;
     const newNode: Node = {
       id,
       type: nodeType,
-      data: {
+        data: {
         label: nodeType === "step" ? "Новый шаг" : nodeType === "gateway" ? "Условие" : "Конец",
         nodeType: nodeType,
+        validator_keys: [],
       },
       position: { x: 250, y: 200 + nodes.length * 80 },
     };
     setNodes((nds) => [...nds, newNode]);
     setSelectedNodeId(id);
   };
+
+  const validatorName = (key: string): string =>
+    project?.validators?.find((v) => (v.key || v.name) === key)?.name ?? key;
+  const edgeTransitionValidatorName = (key: string): string =>
+    project?.validators?.find((v) => (v.key || v.name) === key)?.name ?? key;
 
   if (loading) return <div className={styles.wrap}>Загрузка…</div>;
 
@@ -235,13 +326,34 @@ export function ProcessEditor() {
 
       <div className={styles.flowWrap}>
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={nodes.map((n) => ({ ...n, selected: n.id === selectedNodeId }))}
+          edges={edges.map((e) => {
+            const selected = e.id === selectedEdgeId;
+            return {
+              ...e,
+              selected,
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                ...(selected ? { color: "#2563eb" } : {}),
+              },
+            };
+          })}
+          defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-          onPaneClick={() => setSelectedNodeId(null)}
+          onNodeClick={(_, node) => {
+            setSelectedNodeId(node.id);
+            setSelectedEdgeId(null);
+          }}
+          onEdgeClick={(_, edge) => {
+            setSelectedEdgeId(edge.id);
+            setSelectedNodeId(null);
+          }}
+          onPaneClick={() => {
+            setSelectedNodeId(null);
+            setSelectedEdgeId(null);
+          }}
           nodeTypes={nodeTypes}
           fitView
         >
@@ -282,34 +394,87 @@ export function ProcessEditor() {
             />
           </label>
           {(selectedNode.data as { nodeType?: string })?.nodeType === "step" && (
-            <label>
-              Форма
-              <select
-                value={(selectedNode.data as { form_definition_id?: string })?.form_definition_id ?? ""}
-                onChange={(e) =>
-                  setNodes((nds) =>
-                    nds.map((n) =>
-                      n.id === selectedNodeId
-                        ? {
-                            ...n,
-                            data: {
-                              ...n.data,
-                              form_definition_id: e.target.value || null,
-                            },
-                          }
-                        : n
+            <>
+              <label>
+                Форма
+                <select
+                  value={(selectedNode.data as { form_definition_id?: string })?.form_definition_id ?? ""}
+                  onChange={(e) =>
+                    setNodes((nds) =>
+                      nds.map((n) =>
+                        n.id === selectedNodeId
+                          ? {
+                              ...n,
+                              data: {
+                                ...n.data,
+                                form_definition_id: e.target.value || null,
+                              },
+                            }
+                          : n
+                      )
                     )
-                  )
-                }
-              >
-                <option value="">— Не выбрана —</option>
-                {formList.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                  }
+                >
+                  <option value="">— Не выбрана —</option>
+                  {formList.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className={styles.validatorsSection}>
+                <h4 className={styles.validatorsTitle}>Валидаторы видимости полей</h4>
+                <p className={styles.validatorsHint}>
+                  Выберите валидаторы проекта для этого этапа. Они задаются на вкладке «Валидаторы» проекта.
+                </p>
+                {nodeValidatorKeys.length > 0 && (
+                  <ul className={styles.validatorsList}>
+                    {nodeValidatorKeys.map((key) => (
+                      <li key={key} className={styles.validatorItem}>
+                        <span className={styles.validatorKey}>{key}</span>
+                        <span className={styles.validatorName}>{validatorName(key)}</span>
+                        <button type="button" className={styles.validatorRemoveBtn} onClick={() => removeValidatorKey(key)} title="Убрать">
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className={styles.addValidatorWrap}>
+                  <button
+                    type="button"
+                    className={styles.addValidatorBtn}
+                    onClick={() => setValidatorPickerOpen((v) => !v)}
+                    disabled={!projectId || availableToAdd.length === 0}
+                    title={!projectId ? "Укажите проект процесса" : availableToAdd.length === 0 ? "Все валидаторы уже добавлены" : "Добавить валидатор"}
+                  >
+                    + Валидатор
+                  </button>
+                  {validatorPickerOpen && availableToAdd.length > 0 && (
+                    <ul className={styles.validatorPickerList}>
+                      {availableToAdd.map((v) => (
+                        <li key={v.key || v.name}>
+                          <button
+                            type="button"
+                            className={styles.validatorPickerItem}
+                            onClick={() => addValidatorKey(v.key || v.name)}
+                          >
+                            {v.name} <span className={styles.validatorPickerKey}>({v.key || v.name})</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {!projectId && (
+                  <p className={styles.validatorsEmpty}>Укажите проект процесса выше, чтобы выбирать валидаторы.</p>
+                )}
+                {projectId && projectVisibilityValidators.length === 0 && (
+                  <p className={styles.validatorsEmpty}>В проекте нет валидаторов видимости. Добавьте их на вкладке «Валидаторы» проекта.</p>
+                )}
+              </div>
+            </>
           )}
           {(selectedNode.data as { nodeType?: string })?.nodeType === "gateway" && (
             <label>
@@ -329,6 +494,94 @@ export function ProcessEditor() {
               />
             </label>
           )}
+        </div>
+      )}
+      {selectedEdge && (
+        <div className={styles.sidebar}>
+          <h3>Переход: {selectedEdge.source} → {selectedEdge.target}</h3>
+          <label>
+            Системное имя
+            <input
+              value={String((selectedEdge.data as { key?: string })?.key ?? "")}
+              onChange={(e) =>
+                setEdges((eds) =>
+                  eds.map((ed) =>
+                    ed.id === selectedEdgeId
+                      ? { ...ed, data: { ...ed.data, key: e.target.value } }
+                      : ed
+                  )
+                )
+              }
+              placeholder="step_to_review (латиница, цифры, _)"
+            />
+          </label>
+          <label>
+            Название перехода
+            <input
+              value={String((selectedEdge.data as { label?: string })?.label ?? "")}
+              onChange={(e) =>
+                setEdges((eds) =>
+                  eds.map((ed) =>
+                    ed.id === selectedEdgeId
+                      ? { ...ed, data: { ...ed.data, label: e.target.value } }
+                      : ed
+                  )
+                )
+              }
+              placeholder="Например: На согласование"
+            />
+          </label>
+          <div className={styles.validatorsSection}>
+            <h4 className={styles.validatorsTitle}>Валидаторы перехода</h4>
+            <p className={styles.validatorsHint}>
+              Валидаторы доступа к этапу (step_access). Проверяются при переходе по этой стрелке. Задаются на вкладке «Валидаторы» проекта.
+            </p>
+            {edgeTransitionValidatorKeys.length > 0 && (
+              <ul className={styles.validatorsList}>
+                {edgeTransitionValidatorKeys.map((key) => (
+                  <li key={key} className={styles.validatorItem}>
+                    <span className={styles.validatorKey}>{key}</span>
+                    <span className={styles.validatorName}>{edgeTransitionValidatorName(key)}</span>
+                    <button type="button" className={styles.validatorRemoveBtn} onClick={() => removeEdgeTransitionValidatorKey(key)} title="Убрать">
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className={styles.addValidatorWrap}>
+              <button
+                type="button"
+                className={styles.addValidatorBtn}
+                onClick={() => setEdgeValidatorPickerOpen((v) => !v)}
+                disabled={!projectId || availableEdgeTransitionToAdd.length === 0}
+                title={!projectId ? "Укажите проект процесса" : availableEdgeTransitionToAdd.length === 0 ? "Все валидаторы уже добавлены" : "Добавить валидатор перехода"}
+              >
+                + Валидатор
+              </button>
+              {edgeValidatorPickerOpen && availableEdgeTransitionToAdd.length > 0 && (
+                <ul className={styles.validatorPickerList}>
+                  {availableEdgeTransitionToAdd.map((v) => (
+                    <li key={v.key || v.name}>
+                      <button
+                        type="button"
+                        className={styles.validatorPickerItem}
+                        onClick={() => addEdgeTransitionValidatorKey(v.key || v.name)}
+                      >
+                        {v.name} <span className={styles.validatorPickerKey}>({v.key || v.name})</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {!projectId && (
+              <p className={styles.validatorsEmpty}>Укажите проект процесса выше, чтобы выбирать валидаторы.</p>
+            )}
+            {projectId && projectStepAccessValidators.length === 0 && (
+              <p className={styles.validatorsEmpty}>В проекте нет валидаторов доступа к этапу. Добавьте их на вкладке «Валидаторы» проекта (тип «Доступ к этапу»).</p>
+            )}
+          </div>
         </div>
       )}
     </div>

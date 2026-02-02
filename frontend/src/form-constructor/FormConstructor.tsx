@@ -2,16 +2,13 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   forms,
-  identity,
   catalogs,
   projects,
   type FieldSchema,
-  type FieldAccessRuleSchema,
   type ProjectFieldSchema,
 } from "../api/client";
 import type { CatalogResponse, ProjectResponse } from "../api/client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AccessConstructor } from "../access-constructor/AccessConstructor";
 import styles from "./FormConstructor.module.css";
 
 const FIELD_TYPE_LABELS: Record<string, string> = {
@@ -41,7 +38,6 @@ export function FormConstructor() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState<FieldSchema[]>([]);
-  const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
   const [catalogList, setCatalogList] = useState<CatalogResponse[]>([]);
   const [project, setProject] = useState<ProjectResponse | null>(null);
   const [loading, setLoading] = useState(!isNew);
@@ -60,7 +56,6 @@ export function FormConstructor() {
   const canvasFieldsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    identity.listRoles().then(setRoles).catch(() => setRoles([]));
     catalogs.list().then(setCatalogList).catch(() => setCatalogList([]));
   }, []);
 
@@ -142,10 +137,6 @@ export function FormConstructor() {
   const projectFields = project?.fields ?? [];
   const addedFieldKeys = new Set(fields.map((f) => f.name));
   const projectFieldsAvailable = projectFields.filter((pf) => !addedFieldKeys.has(pf.key));
-
-  const updateAccessRules = useCallback((index: number, rules: FieldAccessRuleSchema[]) => {
-    updateField(index, { access_rules: rules });
-  }, [updateField]);
 
   const save = async () => {
     setSaving(true);
@@ -547,14 +538,6 @@ export function FormConstructor() {
                           ))}
                         </div>
                       </div>
-                    </div>
-                    <div className={styles.propertiesSection}>
-                      <h3>Правила доступа</h3>
-                      <AccessConstructor
-                        rules={selectedField.access_rules || []}
-                        roles={roles}
-                        onChange={(rules) => updateAccessRules(selectedFieldIndex!, rules)}
-                      />
                     </div>
                     <div className={styles.propertiesFooter}>
                       <button

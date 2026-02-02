@@ -121,10 +121,13 @@ class FormSubmissionRepository:
 
     async def get_by_instance_and_node(self, instance_id: UUID, node_id: str) -> FormSubmission | None:
         result = await self._session.execute(
-            select(FormSubmissionModel).where(
+            select(FormSubmissionModel)
+            .where(
                 FormSubmissionModel.process_instance_id == str(instance_id),
                 FormSubmissionModel.node_id == node_id,
             )
+            .order_by(FormSubmissionModel.id.desc())
+            .limit(1)
         )
         row = result.scalar_one_or_none()
         if not row:
@@ -136,3 +139,22 @@ class FormSubmissionRepository:
             form_definition_id=UUID(row.form_definition_id),
             data=json.loads(row.data) if row.data else {},
         )
+
+    async def update_data(self, instance_id: UUID, node_id: str, data: dict) -> bool:
+        """Обновляет данные последней отправки для (instance_id, node_id). Возвращает True если запись найдена."""
+        result = await self._session.execute(
+            select(FormSubmissionModel)
+            .where(
+                FormSubmissionModel.process_instance_id == str(instance_id),
+                FormSubmissionModel.node_id == str(node_id),
+            )
+            .order_by(FormSubmissionModel.id.desc())
+            .limit(1)
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            return False
+        row.data = json.dumps(data)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return True

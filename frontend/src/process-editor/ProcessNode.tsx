@@ -9,13 +9,13 @@ const typeLabels: Record<string, string> = {
   end: "Конец",
 };
 
-export const ProcessNode = memo(function ProcessNode({ data, id }: NodeProps) {
+export const ProcessNode = memo(function ProcessNode({ data, id, selected }: NodeProps) {
   const nodeType = (data as { nodeType?: string })?.nodeType ?? "step";
   const label = (data?.label as string) || id;
   const typeLabel = typeLabels[nodeType] ?? nodeType;
 
   return (
-    <div className={`${styles.node} ${styles[nodeType]}`}>
+    <div className={`${styles.node} ${styles[nodeType]} ${selected ? styles.selected : ""}`}>
       <Handle type="target" position={Position.Top} className={styles.handle} />
       <div className={styles.typeLabel}>{typeLabel}</div>
       <div className={styles.label}>{label}</div>

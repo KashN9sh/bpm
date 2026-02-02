@@ -21,6 +21,7 @@ class ProjectFieldSchema(BaseModel):
 
 
 class ValidatorSchema(BaseModel):
+    key: str = ""  # системное имя (уникальное в рамках проекта); если пусто — выводится из name
     name: str
     type: str  # "field_visibility" | "step_access"
     code: str
@@ -70,6 +71,7 @@ def _field_to_schema(f) -> ProjectFieldSchema:
 
 def _validator_to_schema(v) -> ValidatorSchema:
     return ValidatorSchema(
+        key=v.key,
         name=v.name,
         type=v.type,
         code=v.code,
@@ -107,7 +109,12 @@ def _body_validators_to_domain(validators: list | None) -> list[Validator]:
     if validators is None:
         return []
     return [
-        Validator(name=v.name, type=v.type or "field_visibility", code=v.code or "")
+        Validator(
+            key=(v.key or v.name or "validator").strip() or "validator",
+            name=v.name,
+            type=v.type or "field_visibility",
+            code=v.code or "",
+        )
         for v in validators
     ]
 

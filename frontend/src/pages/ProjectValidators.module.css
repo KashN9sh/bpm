@@ -58,6 +58,13 @@
   background: #fff;
 }
 
+.itemKey {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, monospace;
+  min-width: 6rem;
+}
+
 .itemName {
   font-weight: 500;
   min-width: 0;

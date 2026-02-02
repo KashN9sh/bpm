@@ -34,6 +34,12 @@
   background: #ffebee;
 }
 
+.node.selected {
+  box-shadow: 0 0 0 1px var(--color-accent, #2563eb);
+  border-color: var(--color-accent, #2563eb);
+  z-index: 1;
+}
+
 .typeLabel {
   font-size: 0.7rem;
   color: #666;

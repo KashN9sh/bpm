@@ -100,6 +100,34 @@ class RuntimeService:
         sub = await self._submission_repo.get_by_instance_and_node(instance_id, node_id)
         return sub.data if sub else None
 
+    async def save_step_data(
+        self,
+        instance_id: UUID,
+        node_id: str,
+        form_definition_id: UUID,
+        data: dict,
+    ) -> bool:
+        """Сохраняет данные формы текущего шага без перехода. Возвращает True при успехе."""
+        instance = await self._instance_repo.get_by_id(instance_id)
+        if not instance or not instance.is_active or instance.current_node_id != node_id:
+            return False
+        updated = await self._submission_repo.update_data(instance_id, node_id, data)
+        if not updated:
+            await self._submission_repo.create(
+                process_instance_id=instance_id,
+                node_id=node_id,
+                form_definition_id=form_definition_id,
+                data=data,
+            )
+        return True
+
+    def _flatten_context_for_submit(self, instance_context: dict | None, node_id: str, data: dict, role_ids: list[str] | None) -> dict:
+        """Плоский контекст для выражений и валидаторов при сабмите."""
+        merged = {**(instance_context or {}), node_id: data}
+        flat = self._flatten_context(merged)
+        flat["role_ids"] = role_ids or []
+        return flat
+
     async def submit_form(
         self,
         instance_id: UUID,
@@ -107,6 +135,7 @@ class RuntimeService:
         form_definition_id: UUID,
         data: dict,
         role_ids: list[str] | None = None,
+        chosen_edge_key: str | None = None,
     ) -> ProcessInstance | None:
         instance = await self._instance_repo.get_by_id(instance_id)
         if not instance or not instance.is_active or instance.current_node_id != node_id:
@@ -119,36 +148,45 @@ class RuntimeService:
             return None
 
         new_context = {**instance.context, node_id: data}
+        flat_ctx = self._flatten_context_for_submit(instance.context, node_id, data, role_ids)
         edges = process.get_edges_from(node_id)
-        next_node_id = None
-        if len(edges) == 1:
-            e = edges[0]
-            if e.condition_expression and not evaluate_expression(e.condition_expression, new_context):
-                next_node_id = None
-            else:
-                next_node_id = e.target_node_id
-        elif len(edges) > 1:
+        chosen_edge = None
+        if chosen_edge_key is not None and chosen_edge_key != "":
             for e in edges:
-                if e.condition_expression and not evaluate_expression(e.condition_expression, new_context):
-                    continue
-                next_node_id = e.target_node_id
-                break
-            if not next_node_id and edges:
-                next_node_id = edges[0].target_node_id
-        if next_node_id and self._project_repo and process.project_id:
-            project = await self._project_repo.get_by_id(process.project_id)
-            if project and project.validators:
-                flat_ctx = self._flatten_context(new_context)
-                flat_ctx["role_ids"] = role_ids or []
-                if not run_step_access_validators(project.validators, flat_ctx, next_node_id):
-                    return None
+                if (getattr(e, "key", None) or e.id) == chosen_edge_key:
+                    chosen_edge = e
+                    break
+        if chosen_edge is None:
+            if len(edges) == 1:
+                e = edges[0]
+                if not e.condition_expression or evaluate_expression(e.condition_expression, flat_ctx):
+                    chosen_edge = e
+            elif len(edges) > 1:
+                for e in edges:
+                    if e.condition_expression and not evaluate_expression(e.condition_expression, flat_ctx):
+                        continue
+                    chosen_edge = e
+                    break
+                if not chosen_edge and edges:
+                    chosen_edge = edges[0]
+        next_node_id = chosen_edge.target_node_id if chosen_edge else None
+        if chosen_edge:
+            keys = getattr(chosen_edge, "transition_validator_keys", None) or []
+            if keys and process.project_id and self._project_repo:
+                project = await self._project_repo.get_by_id(process.project_id)
+                if project and getattr(project, "validators", None):
+                    key_set = set(keys)
+                    transition_validators = [v for v in project.validators if getattr(v, "type", None) == "step_access" and getattr(v, "key", None) in key_set]
+                    if transition_validators:
+                        if not run_step_access_validators(transition_validators, flat_ctx, chosen_edge.target_node_id):
+                            return None
+        next_node = process.get_node(next_node_id) if next_node_id else None
         await self._submission_repo.create(
             process_instance_id=instance_id,
             node_id=node_id,
             form_definition_id=form_definition_id,
             data=data,
         )
-        next_node = process.get_node(next_node_id) if next_node_id else None
         if not next_node:
             await self._instance_repo.update(
                 instance_id,

@@ -8,7 +8,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Any
 
-from RestrictedPython import compile_restricted, safe_globals
+from RestrictedPython import compile_restricted_exec, safe_globals
 from RestrictedPython.Eval import default_guarded_getiter
 
 logger = logging.getLogger(__name__)
@@ -34,10 +34,12 @@ def _get_restricted_globals(context: dict[str, Any], node_id: str | None) -> dic
 def _run_code(code: str, context: dict[str, Any], node_id: str | None) -> dict[str, Any]:
     """Компилирует и выполняет код в ограниченном globals. Возвращает globals после exec."""
     g = _get_restricted_globals(context, node_id)
-    byte_code = compile_restricted(code, filename="<validator>", mode="exec")
-    if byte_code.errors:
-        raise SyntaxError("; ".join(err for err in byte_code.errors))
-    exec(byte_code.code, g)
+    result = compile_restricted_exec(code, filename="<validator>")
+    if result.errors:
+        raise SyntaxError("; ".join(str(err) for err in result.errors))
+    if result.code is None:
+        raise SyntaxError("Compilation failed")
+    exec(result.code, g)
     return g
 
 
@@ -74,7 +76,7 @@ def run_field_visibility_validators(
                 perm_map = validate_fn(flat_ctx)
                 if isinstance(perm_map, dict):
                     for key, val in perm_map.items():
-                        if isinstance(key, str) and isinstance(val, str) and val in ("hidden", "read", "write"):
+                        if isinstance(val, str) and val in ("hidden", "read", "write"):
                             result[str(key)] = val
         except FuturesTimeoutError:
             logger.warning("Validator field_visibility timed out: %s", getattr(v, "name", "?"))

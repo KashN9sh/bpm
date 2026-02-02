@@ -13,6 +13,7 @@ class NodeType(str, Enum):
 
 @dataclass
 class Node:
+    """Узел процесса. validator_keys — ключи валидаторов проекта (field_visibility), привязанных к этапу (шаг с формой)."""
     id: str
     node_type: NodeType
     label: str = ""
@@ -20,15 +21,19 @@ class Node:
     position_x: float = 0.0
     position_y: float = 0.0
     expression: str | None = None  # для gateway — условие перехода
+    validator_keys: list[str] = field(default_factory=list)  # ключи валидаторов проекта (видимость полей)
 
 
 @dataclass
 class Edge:
+    """Ребро процесса. key — системное имя для логирования; label — название перехода; transition_validator_keys — ключи валидаторов (step_access)."""
     id: str
     source_node_id: str
     target_node_id: str
-    label: str = ""
+    key: str = ""  # системное имя (для логирования)
+    label: str = ""  # название перехода
     condition_expression: str | None = None  # опциональное условие на ребре
+    transition_validator_keys: list[str] = field(default_factory=list)  # ключи валидаторов проекта (доступ к этапу)
 
 
 @dataclass

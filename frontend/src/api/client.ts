@@ -179,6 +179,7 @@ export interface ProjectFieldSchema {
 }
 
 export interface ValidatorSchema {
+  key: string; // системное имя (уникальное в рамках проекта)
   name: string;
   type: "field_visibility" | "step_access";
   code: string;
@@ -239,7 +240,7 @@ export const projects = {
     api<void>(`/api/projects/${id}`, { method: "DELETE" }),
 };
 
-// Process Design API
+// Process Design API — на этапе/условии хранятся ключи валидаторов проекта
 export interface ProcessNodeSchema {
   id: string;
   node_type: string;
@@ -248,14 +249,17 @@ export interface ProcessNodeSchema {
   position_x: number;
   position_y: number;
   expression?: string | null;
+  validator_keys?: string[]; // ключи валидаторов проекта (field_visibility), для шага
 }
 
 export interface ProcessEdgeSchema {
   id: string;
   source_node_id: string;
   target_node_id: string;
-  label: string;
+  key?: string; // системное имя (для логирования)
+  label?: string; // название перехода
   condition_expression?: string | null;
+  transition_validator_keys?: string[]; // ключи валидаторов проекта (step_access) при переходе по этому ребру
 }
 
 export interface ProcessResponse {
@@ -305,6 +309,13 @@ export const processes = {
 };
 
 // Runtime API
+export interface AvailableTransition {
+  edge_id: string;
+  key: string;
+  label: string;
+  target_node_id: string;
+}
+
 export interface CurrentFormResponse {
   instance_id: string;
   node_id: string;
@@ -317,12 +328,14 @@ export interface CurrentFormResponse {
       label: string;
       field_type: string;
       required: boolean;
+      read_only?: boolean;
       options?: { value: string; label: string }[] | null;
       validations?: Record<string, unknown> | null;
       width?: number | null;
     }>;
   };
   submission_data: Record<string, unknown> | null;
+  available_transitions?: AvailableTransition[];
 }
 
 export interface DocumentListItem {
@@ -347,7 +360,17 @@ export const runtime = {
     ),
   getCurrentForm: (instanceId: string) =>
     api<CurrentFormResponse>(`/api/runtime/instances/${instanceId}/current-form`),
-  submitForm: (instanceId: string, nodeId: string, data: Record<string, unknown>) =>
+  saveStep: (instanceId: string, nodeId: string, data: Record<string, unknown>) =>
+    api<{ saved: boolean }>(`/api/runtime/instances/${instanceId}/nodes/${nodeId}/save`, {
+      method: "POST",
+      body: JSON.stringify({ data }),
+    }),
+  submitForm: (
+    instanceId: string,
+    nodeId: string,
+    data: Record<string, unknown>,
+    chosenEdgeKey?: string | null
+  ) =>
     api<{
       instance_id: string;
       status: string;
@@ -355,7 +378,7 @@ export const runtime = {
       completed: boolean;
     }>(`/api/runtime/instances/${instanceId}/nodes/${nodeId}/submit`, {
       method: "POST",
-      body: JSON.stringify({ data }),
+      body: JSON.stringify({ data, chosen_edge_key: chosenEdgeKey ?? undefined }),
     }),
   getInstance: (instanceId: string) =>
     api<{

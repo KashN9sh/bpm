@@ -33,6 +33,7 @@ export function ProjectValidators() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editKey, setEditKey] = useState("");
   const [editName, setEditName] = useState("");
   const [editType, setEditType] = useState<"field_visibility" | "step_access">("field_visibility");
   const [editCode, setEditCode] = useState("");
@@ -53,6 +54,7 @@ export function ProjectValidators() {
 
   const startAdd = () => {
     setEditingIndex(-1);
+    setEditKey("");
     setEditName("");
     setEditType("field_visibility");
     setEditCode(DEFAULT_CODE_FIELD_VISIBILITY);
@@ -61,6 +63,7 @@ export function ProjectValidators() {
   const startEdit = (index: number) => {
     const v = validators[index];
     setEditingIndex(index);
+    setEditKey(v.key ?? "");
     setEditName(v.name);
     setEditType(v.type as "field_visibility" | "step_access");
     setEditCode(v.code || "");
@@ -70,12 +73,25 @@ export function ProjectValidators() {
     setEditingIndex(null);
   };
 
+  const keyFromName = (name: string) =>
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_-]/g, "") || "validator";
+
   const saveEdit = async () => {
-    if (!projectId || !project) return;
+    if (!projectId || !project || editingIndex === null) return;
     setSaving(true);
     setError(null);
+    const key = editKey.trim() || keyFromName(editName);
     const next: ValidatorSchema[] = [...validators];
-    const newValidator: ValidatorSchema = { name: editName.trim(), type: editType, code: editCode };
+    const newValidator: ValidatorSchema = {
+      key,
+      name: editName.trim(),
+      type: editType,
+      code: editCode,
+    };
     if (editingIndex === -1) {
       next.push(newValidator);
     } else {
@@ -119,7 +135,7 @@ export function ProjectValidators() {
     };
   }, []);
 
-  const onEditorMount = (editor: editor.IStandaloneCodeEditor, monaco: typeof import("monaco-editor")) => {
+  const onEditorMount = (_editor: editor.IStandaloneCodeEditor, monaco: typeof import("monaco-editor")) => {
     completionDisposable.current?.dispose();
     const fieldKeys = (project?.fields ?? []).map((f) => f.key);
     const suggestions = [
@@ -141,7 +157,7 @@ export function ProjectValidators() {
     ];
     completionDisposable.current = monaco.languages.registerCompletionItemProvider("python", {
       triggerCharacters: ['"', "'", "["],
-      provideCompletionItems: () => ({ suggestions }),
+      provideCompletionItems: () => ({ suggestions } as import("monaco-editor").languages.CompletionList),
     });
   };
 
@@ -169,6 +185,7 @@ export function ProjectValidators() {
         <ul className={styles.list}>
           {validators.map((v, i) => (
             <li key={i} className={styles.item}>
+              <span className={styles.itemKey}>{v.key ?? v.name}</span>
               <span className={styles.itemName}>{v.name}</span>
               <span className={styles.itemType}>
                 {VALIDATOR_TYPES.find((t) => t.value === v.type)?.label ?? v.type}
@@ -198,6 +215,15 @@ export function ProjectValidators() {
           <h3 className={styles.editorTitle}>
             {editingIndex === -1 ? "Новый валидатор" : "Редактирование"}
           </h3>
+          <label className={styles.label}>
+            Системное имя
+            <input
+              value={editKey}
+              onChange={(e) => setEditKey(e.target.value)}
+              placeholder="field_visibility_by_role (латиница, цифры, _)"
+              className={styles.input}
+            />
+          </label>
           <label className={styles.label}>
             Название
             <input

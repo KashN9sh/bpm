@@ -11,6 +11,7 @@ export function RuntimeForm() {
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,13 +33,27 @@ export function RuntimeForm() {
       .finally(() => setLoading(false));
   }, [instanceId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!instanceId || !state || state === "completed" || !("node_id" in state)) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await runtime.saveStep(instanceId, state.node_id, formData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка сохранения");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent, chosenEdgeKey?: string | null) => {
     e.preventDefault();
     if (!instanceId || !state || state === "completed" || !("node_id" in state)) return;
     setSubmitting(true);
     setError(null);
     try {
-      const result = await runtime.submitForm(instanceId, state.node_id, formData);
+      const result = await runtime.submitForm(instanceId, state.node_id, formData, chosenEdgeKey);
       if (result.completed) {
         setState("completed");
       } else {
@@ -77,69 +92,92 @@ export function RuntimeForm() {
 
   return (
     <div className={styles.wrap}>
-      <h1>{form_definition.name}</h1>
-      {form_definition.description && (
-        <p className={styles.desc}>{form_definition.description}</p>
-      )}
-      <form onSubmit={handleSubmit} className={styles.form}>
-        {form_definition.fields.map((field) => (
-          <label
-            key={field.name}
-            className={styles.field}
-            style={{ gridColumn: `span ${field.width ?? 12}` }}
+      <nav className={styles.navbar}>
+        <h1 className={styles.navbarTitle}>{form_definition.name || "Без названия"}</h1>
+        <div className={styles.navbarActions}>
+          <button
+            type="button"
+            disabled={submitting || saving}
+            onClick={handleSave}
           >
-            <span>{field.label || field.name}</span>
-            {field.field_type === "textarea" ? (
-              <textarea
-                value={(formData[field.name] as string) ?? ""}
-                onChange={(e) => updateField(field.name, e.target.value)}
-                required={field.required}
-                rows={3}
-              />
-            ) : field.field_type === "boolean" ? (
-              <input
-                type="checkbox"
-                checked={Boolean(formData[field.name])}
-                onChange={(e) => updateField(field.name, e.target.checked)}
-              />
-            ) : field.field_type === "number" ? (
-              <input
-                type="number"
-                value={(formData[field.name] as number) ?? ""}
-                onChange={(e) =>
-                  updateField(field.name, e.target.value === "" ? undefined : Number(e.target.value))
-                }
-                required={field.required}
-              />
-            ) : field.field_type === "select" ? (
-              <select
-                value={(formData[field.name] as string) ?? ""}
-                onChange={(e) => updateField(field.name, e.target.value)}
-                required={field.required}
-              >
-                <option value="">— Выберите —</option>
-                {(field.options ?? []).map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label ?? opt.value}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type={field.field_type === "date" || field.field_type === "datetime" ? field.field_type : "text"}
-                value={(formData[field.name] as string) ?? ""}
-                onChange={(e) => updateField(field.name, e.target.value)}
-                required={field.required}
-              />
-            )}
-          </label>
-        ))}
-        <div className={styles.actions}>
-          <button type="submit" disabled={submitting}>
-            {submitting ? "Отправка…" : "Далее"}
+            {saving ? "Сохранение…" : "Сохранить"}
           </button>
+          {(state.available_transitions ?? []).map((t) => (
+            <button
+              key={t.edge_id}
+              type="button"
+              disabled={submitting || saving}
+              onClick={(e) => handleSubmit(e, t.key)}
+            >
+              {submitting ? "Отправка…" : t.label || "Далее"}
+            </button>
+          ))}
         </div>
-      </form>
+      </nav>
+      <div className={styles.previewFull}>
+        {form_definition.description && (
+          <p className={styles.previewDesc}>{form_definition.description}</p>
+        )}
+        <form onSubmit={handleSave} className={styles.previewForm}>
+          {form_definition.fields.map((field) => (
+            <label
+              key={field.name}
+              className={styles.previewField}
+              style={{ gridColumn: `span ${field.width ?? 12}` }}
+            >
+              <span>{field.label || field.name}</span>
+              {field.field_type === "textarea" ? (
+                <textarea
+                  value={(formData[field.name] as string) ?? ""}
+                  onChange={(e) => updateField(field.name, e.target.value)}
+                  required={field.required}
+                  rows={3}
+                  readOnly={field.read_only}
+                />
+              ) : field.field_type === "boolean" ? (
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData[field.name])}
+                  onChange={(e) => updateField(field.name, e.target.checked)}
+                  disabled={field.read_only}
+                />
+              ) : field.field_type === "number" ? (
+                <input
+                  type="number"
+                  value={(formData[field.name] as number) ?? ""}
+                  onChange={(e) =>
+                    updateField(field.name, e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                  required={field.required}
+                  readOnly={field.read_only}
+                />
+              ) : field.field_type === "select" ? (
+                <select
+                  value={(formData[field.name] as string) ?? ""}
+                  onChange={(e) => updateField(field.name, e.target.value)}
+                  required={field.required}
+                  disabled={field.read_only}
+                >
+                  <option value="">— Выберите —</option>
+                  {(field.options ?? []).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label ?? opt.value}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={field.field_type === "date" || field.field_type === "datetime" ? field.field_type : "text"}
+                  value={(formData[field.name] as string) ?? ""}
+                  onChange={(e) => updateField(field.name, e.target.value)}
+                  required={field.required}
+                  readOnly={field.read_only}
+                />
+              )}
+            </label>
+          ))}
+        </form>
+      </div>
     </div>
   );
 }
