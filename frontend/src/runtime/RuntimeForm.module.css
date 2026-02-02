@@ -17,11 +17,9 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
   background: #fff;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 .navbarTitle {
@@ -67,12 +65,9 @@
   overflow-y: auto;
   width: 100%;
   max-width: 100%;
-  margin-top: 0;
   padding: 1.5rem 2rem;
   background: #fff;
-  border: 1px solid var(--color-border);
-  border-top: none;
-  border-radius: 0 0 var(--radius) var(--radius);
+  border-radius: var(--radius);
 }
 
 .previewDesc {
